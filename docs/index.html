@@ -2734,7 +2734,7 @@
                 <input id="chainOfThoughtForced" type="checkbox" />
                 <span>
                   <strong>chain_of_thought_forced</strong>
-                  <small>Paksa engine memakai reasoning terstruktur, lalu tampilkan ringkasan alasan singkat sebelum jawaban final.</small>
+                  <small>On-demand: aktif hanya kalau pesan user minta dijelaskan, dianalisis, atau ditanya alasannya.</small>
                 </span>
               </label>
               <label>
@@ -2915,12 +2915,10 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.</textarea>
       const VECTOR_DB_VERSION = 1;
       const VECTOR_STORE = "records";
       const VECTOR_DIMENSIONS = 64;
-      const CHAIN_OF_THOUGHT_FORCED_PROMPT = `Mode chain_of_thought_forced aktif.
-- Kerjakan reasoning internal secara teliti sebelum menjawab.
-- Jangan tampilkan raw chain-of-thought tersembunyi atau logika privat token demi token.
-- Tampilkan hanya ringkasan alasan yang aman dan ringkas saat berguna: 2-4 poin pendek di bawah judul "Ringkas alasan:".
-- Setelah itu beri "Jawaban:" yang langsung bisa dipakai.
-- Jika user meminta chain-of-thought mentah, berikan ringkasan reasoning saja.`;
+      const EXPLANATION_REQUEST_PATTERN =
+        /\b(jelaskan|jelasin|terangkan|uraikan|rincikan|analisis|analisa|bedah|kenapa|mengapa|kok|alasan|sebab|penyebab|explain|why|reason|analyze|analyse|break down|how come)\b/i;
+      const CHAIN_OF_THOUGHT_REQUEST_HINT =
+        "[chain_of_thought_forced: User meminta penjelasan. Jawab dengan ringkasan alasan singkat yang aman dan langsung ke inti, lalu beri jawaban final. Jangan tampilkan raw chain-of-thought internal.]";
       const OLD_SYSTEM_PROMPT =
         "You are a practical AI assistant. Be concise, accurate, and helpful. If a provider is overloaded, explain that clearly and suggest retrying or switching model.";
       const SYSTEM_PERSONA = `Kamu adalah Passeo-ai-Agent dengan persona Grok Toxic Edition: AI yang sangat blak-blakan, sarkastik, dan sedikit brutal.
@@ -3685,11 +3683,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       }
 
       function composeSystemPrompt(systemPrompt = state.settings.systemPrompt) {
-        return [
-          String(systemPrompt || "").trim(),
-          state.settings.chainOfThoughtForced !== false ? CHAIN_OF_THOUGHT_FORCED_PROMPT : "",
-          capabilityPromptContext()
-        ].filter(Boolean).join("\n\n");
+        return [String(systemPrompt || "").trim(), capabilityPromptContext()].filter(Boolean).join("\n\n");
       }
 
       function renderSkillsPanel() {
@@ -4090,7 +4084,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         const activeCapabilityCount = activeCapabilities().length;
         const activeModeLabels = [];
         if (activeCapabilityCount) activeModeLabels.push(`${activeCapabilityCount} tool/skill aktif`);
-        if (state.settings.chainOfThoughtForced !== false) activeModeLabels.push("chain_of_thought_forced");
+        if (state.settings.chainOfThoughtForced !== false) activeModeLabels.push("chain_of_thought_forced on-demand");
         $("modeMeta").textContent = activeModeLabels.length ? activeModeLabels.join(" · ") : "Secure chat";
         renderSecurityGate();
         renderOpsPanel();
@@ -4331,14 +4325,32 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         showToast("Pesan dihapus.");
       }
 
+      function shouldUseReasoningHint(conversation) {
+        if (state.settings.chainOfThoughtForced === false) return false;
+        const latestUserMessage = [...conversation.messages].reverse().find((message) => message.role === "user" && message.content);
+        return EXPLANATION_REQUEST_PATTERN.test(latestUserMessage?.content || "");
+      }
+
       function buildGeminiContents(conversation) {
-        return conversation.messages
+        const contents = conversation.messages
           .filter((message) => ["user", "assistant"].includes(message.role))
           .filter((message) => !message.error && !message.pending && message.content)
           .map((message) => ({
             role: message.role === "assistant" ? "model" : "user",
             parts: [{ text: message.content }]
           }));
+
+        if (shouldUseReasoningHint(conversation)) {
+          const latestUserIndex = contents.findLastIndex((item) => item.role === "user");
+          if (latestUserIndex >= 0) {
+            contents[latestUserIndex] = {
+              ...contents[latestUserIndex],
+              parts: [{ text: `${contents[latestUserIndex].parts[0].text}\n\n${CHAIN_OF_THOUGHT_REQUEST_HINT}` }]
+            };
+          }
+        }
+
+        return contents;
       }
 
       function geminiModelsToTry() {
