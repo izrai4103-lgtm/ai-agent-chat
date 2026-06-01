@@ -252,11 +252,42 @@
       .conversation {
         width: 100%;
         min-width: 0;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 32px;
+        align-items: start;
+        gap: 8px;
         border: 1px solid transparent;
         border-radius: 8px;
         background: transparent;
         padding: 11px;
         text-align: left;
+      }
+
+      .conversation-main {
+        min-width: 0;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        padding: 0;
+        text-align: left;
+      }
+
+      .conversation-delete {
+        width: 32px;
+        height: 32px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.74);
+        color: var(--muted);
+        font-size: 18px;
+        font-weight: 950;
+        line-height: 1;
+      }
+
+      .conversation-delete:hover {
+        border-color: rgba(239, 68, 68, 0.38);
+        background: rgba(254, 226, 226, 0.95);
+        color: #b91c1c;
       }
 
       .conversation:hover,
@@ -288,6 +319,7 @@
       }
 
       .conversation-preview {
+        display: block;
         margin-top: 6px;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -297,6 +329,10 @@
       .sidebar-footer {
         display: grid;
         gap: 10px;
+      }
+
+      .clear-history-button {
+        width: 100%;
       }
 
       .connection-card {
@@ -1249,6 +1285,24 @@
         transition: transform 180ms steps(3, end), background 180ms ease;
       }
 
+      .conversation-main {
+        font-family: inherit;
+      }
+
+      .conversation-delete {
+        border: 3px solid #100b08;
+        border-top-color: #fff0a8;
+        border-left-color: #c89b3c;
+        background: #28231f;
+        color: #fff0b8;
+        box-shadow: 0 4px 0 #070504;
+      }
+
+      .conversation-delete:hover {
+        background: #5b1c1c;
+        color: #fff4c7;
+      }
+
       .conversation:hover,
       .conversation.active {
         border-color: #f4c542;
@@ -1903,6 +1957,24 @@
         box-shadow: none;
       }
 
+      .conversation-main {
+        font-family: inherit;
+      }
+
+      .conversation-delete {
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.06);
+        color: #aeb7c6;
+        box-shadow: none;
+      }
+
+      .conversation-delete:hover {
+        border-color: rgba(248, 113, 113, 0.5);
+        background: rgba(127, 29, 29, 0.42);
+        color: #fecaca;
+      }
+
       .btn-primary,
       .tabs button.active,
       .provider-tabs button.active {
@@ -2280,6 +2352,7 @@
         <nav id="conversationList" class="conversation-list" aria-label="Daftar chat"></nav>
 
         <footer class="sidebar-footer">
+          <button id="clearHistoryButton" class="btn btn-soft clear-history-button" type="button" title="Hapus semua chat lama">Bersihkan lama</button>
           <div class="sidebar-stats" aria-label="Statistik sesi">
             <div class="stat-card">
               <span>Chat</span>
@@ -2945,14 +3018,18 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           .map((conversation) => {
             const last = [...conversation.messages].reverse().find((message) => message.content);
             const preview = last ? last.content.replace(/\s+/g, " ").slice(0, 90) : "Belum ada pesan";
+            const active = conversation.id === state.activeConversationId;
             return `
-              <button class="conversation ${conversation.id === state.activeConversationId ? "active" : ""}" data-id="${conversation.id}" type="button">
-                <span class="conversation-line">
-                  <span class="conversation-title">${escapeHtml(conversation.title)}</span>
-                  <span class="conversation-time">${relativeTime(conversation.updatedAt)}</span>
-                </span>
-                <span class="conversation-preview">${escapeHtml(preview)}</span>
-              </button>
+              <article class="conversation ${active ? "active" : ""}" data-id="${escapeHtml(conversation.id)}">
+                <button class="conversation-main" data-select-conversation="${escapeHtml(conversation.id)}" type="button">
+                  <span class="conversation-line">
+                    <span class="conversation-title">${escapeHtml(conversation.title)}</span>
+                    <span class="conversation-time">${relativeTime(conversation.updatedAt)}</span>
+                  </span>
+                  <span class="conversation-preview">${escapeHtml(preview)}</span>
+                </button>
+                <button class="conversation-delete" data-delete-conversation="${escapeHtml(conversation.id)}" type="button" title="Hapus chat ini" aria-label="Hapus chat ${escapeHtml(conversation.title)}">×</button>
+              </article>
             `;
           })
           .join("");
@@ -3289,12 +3366,36 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       }
 
       function deleteConversation() {
-        state.conversations = state.conversations.filter((conversation) => conversation.id !== state.activeConversationId);
+        deleteConversationById(state.activeConversationId);
+      }
+
+      function deleteConversationById(conversationId) {
+        const target = state.conversations.find((conversation) => conversation.id === conversationId);
+        if (!target) return;
+        if (conversationId === state.activeConversationId && state.sending) state.abortController?.abort();
+        state.conversations = state.conversations.filter((conversation) => conversation.id !== conversationId);
         if (!state.conversations.length) state.conversations = [defaultConversation()];
-        state.activeConversationId = state.conversations[0].id;
+        if (!state.conversations.some((conversation) => conversation.id === state.activeConversationId)) {
+          state.activeConversationId = state.conversations[0].id;
+        }
         saveConversations();
         render();
         showToast("Chat dihapus.");
+      }
+
+      function clearOldConversations() {
+        const active = activeConversation();
+        const oldCount = state.conversations.filter((conversation) => conversation.id !== active.id).length;
+        if (!oldCount) {
+          showToast("Tidak ada chat lama untuk dibersihkan.");
+          return;
+        }
+        if (!window.confirm(`Hapus ${oldCount} chat lama dari riwayat?`)) return;
+        state.conversations = [active];
+        state.activeConversationId = active.id;
+        saveConversations();
+        render();
+        showToast(`${oldCount} chat lama dihapus.`);
       }
 
       function deleteMessage(messageId) {
@@ -3853,6 +3954,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       function bindEvents() {
         $("newChatButton").addEventListener("click", newConversation);
         $("deleteButton").addEventListener("click", deleteConversation);
+        $("clearHistoryButton").addEventListener("click", clearOldConversations);
         $("downloadButton").addEventListener("click", exportTranscript);
         $("settingsButton").addEventListener("click", () => {
           requestSettingsAccess("connection", { forcePrompt: true, message: "Masukkan password Set." });
@@ -3898,9 +4000,15 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           render();
         });
         $("conversationList").addEventListener("click", (event) => {
-          const button = event.target.closest(".conversation");
+          const deleteButton = event.target.closest("[data-delete-conversation]");
+          if (deleteButton) {
+            deleteConversationById(deleteButton.dataset.deleteConversation);
+            return;
+          }
+
+          const button = event.target.closest("[data-select-conversation]");
           if (!button) return;
-          state.activeConversationId = button.dataset.id;
+          state.activeConversationId = button.dataset.selectConversation;
           state.sidebarOpen = false;
           saveConversations();
           render();
