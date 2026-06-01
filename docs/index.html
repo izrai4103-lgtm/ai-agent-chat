@@ -1,0 +1,1831 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI Agent Chat</title>
+    <meta
+      name="description"
+      content="GitHub Pages-ready AI chat for Gemini, Hermes Gateway, and Ollama."
+    />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f3f6f4;
+        --panel: #ffffff;
+        --panel-soft: #eef7f3;
+        --ink: #111827;
+        --muted: #667085;
+        --line: #d7ded9;
+        --line-strong: #b6c3bc;
+        --brand: #0f766e;
+        --brand-dark: #115e59;
+        --brand-soft: #dff4ef;
+        --danger: #dc2626;
+        --danger-soft: #fff1f2;
+        --warn: #f59e0b;
+        --ok: #16a34a;
+        --shadow: 0 18px 50px rgba(17, 24, 39, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      [hidden] {
+        display: none !important;
+      }
+
+      html,
+      body,
+      #app {
+        min-height: 100%;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        letter-spacing: 0;
+      }
+
+      button,
+      input,
+      textarea,
+      select {
+        font: inherit;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.62;
+      }
+
+      .shell {
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: 304px minmax(0, 1fr);
+      }
+
+      .sidebar {
+        min-width: 0;
+        border-right: 1px solid var(--line);
+        background: var(--panel-soft);
+        display: grid;
+        grid-template-rows: auto auto minmax(0, 1fr) auto;
+        gap: 14px;
+        padding: 16px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+      }
+
+      .brand img {
+        width: 42px;
+        height: 42px;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        background: #fff;
+      }
+
+      .brand-title {
+        font-weight: 900;
+        font-size: 18px;
+        line-height: 1.1;
+      }
+
+      .brand-subtitle {
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .main {
+        min-width: 0;
+        min-height: 100vh;
+        background: var(--panel);
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr) auto;
+      }
+
+      .topbar {
+        min-height: 72px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 18px;
+      }
+
+      .topbar-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+      }
+
+      .title {
+        min-width: 0;
+      }
+
+      .title h1 {
+        margin: 0;
+        font-size: 17px;
+        line-height: 1.2;
+        font-weight: 900;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .pills {
+        margin-top: 8px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+      }
+
+      .pill {
+        min-height: 30px;
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: #fff;
+        padding: 0 10px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 850;
+      }
+
+      .dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 999px;
+        background: #98a2b3;
+      }
+
+      .dot.ok {
+        background: var(--ok);
+      }
+
+      .dot.warn {
+        background: var(--warn);
+      }
+
+      .dot.bad {
+        background: var(--danger);
+      }
+
+      .btn {
+        min-height: 42px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        padding: 0 13px;
+        color: var(--ink);
+        background: transparent;
+        font-weight: 850;
+        transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+      }
+
+      .btn:hover {
+        transform: translateY(-1px);
+      }
+
+      .btn:focus-visible,
+      input:focus-visible,
+      select:focus-visible,
+      textarea:focus-visible {
+        outline: 3px solid rgba(15, 118, 110, 0.22);
+        outline-offset: 2px;
+      }
+
+      .btn-primary {
+        background: var(--brand);
+        color: #fff;
+      }
+
+      .btn-primary:hover {
+        background: var(--brand-dark);
+      }
+
+      .btn-soft {
+        border-color: var(--line);
+        background: #fff;
+      }
+
+      .btn-soft:hover {
+        border-color: var(--line-strong);
+      }
+
+      .btn-icon {
+        width: 42px;
+        padding: 0;
+        flex: 0 0 auto;
+      }
+
+      .conversation-list {
+        min-height: 0;
+        overflow-y: auto;
+        display: grid;
+        gap: 7px;
+        align-content: start;
+      }
+
+      .conversation {
+        width: 100%;
+        min-width: 0;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        background: transparent;
+        padding: 11px;
+        text-align: left;
+      }
+
+      .conversation:hover,
+      .conversation.active {
+        border-color: rgba(15, 118, 110, 0.26);
+        background: rgba(255, 255, 255, 0.8);
+      }
+
+      .conversation-line {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        min-width: 0;
+      }
+
+      .conversation-title {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-weight: 900;
+        font-size: 14px;
+      }
+
+      .conversation-time,
+      .conversation-preview {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 750;
+      }
+
+      .conversation-preview {
+        margin-top: 6px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .sidebar-footer {
+        display: grid;
+        gap: 10px;
+      }
+
+      .connection-card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 12px;
+        display: grid;
+        gap: 10px;
+      }
+
+      .chat-scroll {
+        min-height: 0;
+        overflow-y: auto;
+        padding: 26px 18px;
+      }
+
+      .chat-inner {
+        width: min(880px, 100%);
+        margin: 0 auto;
+        display: grid;
+        gap: 18px;
+      }
+
+      .empty {
+        min-height: 56vh;
+        display: grid;
+        align-content: center;
+        gap: 20px;
+      }
+
+      .empty h2 {
+        margin: 0;
+        font-size: 32px;
+        line-height: 1.15;
+        font-weight: 950;
+      }
+
+      .empty p {
+        margin: 0;
+        max-width: 680px;
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 750;
+        line-height: 1.6;
+      }
+
+      .prompt-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .prompt-card {
+        min-width: 0;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 14px;
+        text-align: left;
+      }
+
+      .prompt-card:hover {
+        border-color: rgba(15, 118, 110, 0.46);
+      }
+
+      .prompt-card strong {
+        display: block;
+        font-size: 14px;
+      }
+
+      .prompt-card span {
+        display: block;
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 750;
+        line-height: 1.55;
+      }
+
+      .message-row {
+        display: grid;
+        grid-template-columns: 36px minmax(0, 1fr);
+        gap: 12px;
+        align-items: start;
+      }
+
+      .message-row.user {
+        grid-template-columns: minmax(0, 1fr) 36px;
+      }
+
+      .avatar {
+        width: 36px;
+        height: 36px;
+        display: grid;
+        place-items: center;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        background: #fff;
+        color: var(--brand);
+        font-weight: 950;
+      }
+
+      .message-row.user .avatar {
+        grid-column: 2;
+        background: var(--brand);
+        color: #fff;
+        border-color: var(--brand);
+      }
+
+      .bubble {
+        min-width: 0;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 13px 14px;
+      }
+
+      .message-row.user .bubble {
+        grid-column: 1;
+        grid-row: 1;
+        justify-self: end;
+        max-width: min(720px, 100%);
+        background: var(--brand-soft);
+        border-color: rgba(15, 118, 110, 0.28);
+      }
+
+      .bubble.error {
+        background: var(--danger-soft);
+        border-color: rgba(220, 38, 38, 0.28);
+      }
+
+      .bubble-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 9px;
+      }
+
+      .bubble-role {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 950;
+        text-transform: uppercase;
+      }
+
+      .bubble-time {
+        color: #98a2b3;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .message-text {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        line-height: 1.62;
+        font-size: 15px;
+      }
+
+      .typing {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 22px;
+      }
+
+      .typing span {
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: var(--brand);
+        animation: typing 1s infinite ease-in-out;
+      }
+
+      .typing span:nth-child(2) {
+        animation-delay: 120ms;
+      }
+
+      .typing span:nth-child(3) {
+        animation-delay: 240ms;
+      }
+
+      @keyframes typing {
+        0%,
+        100% {
+          opacity: 0.35;
+          transform: translateY(0);
+        }
+
+        50% {
+          opacity: 1;
+          transform: translateY(-2px);
+        }
+      }
+
+      .composer-wrap {
+        border-top: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.96);
+        padding: 14px 18px 16px;
+      }
+
+      .composer {
+        width: min(880px, 100%);
+        margin: 0 auto;
+        border: 1px solid #cbd5cf;
+        border-radius: 8px;
+        background: #fff;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+        padding: 8px;
+        box-shadow: 0 12px 32px rgba(17, 24, 39, 0.08);
+      }
+
+      .composer textarea {
+        min-height: 48px;
+        max-height: 180px;
+        resize: none;
+        border: 0;
+        outline: 0;
+        padding: 12px;
+        line-height: 1.5;
+      }
+
+      .composer-meta {
+        width: min(880px, 100%);
+        margin: 8px auto 0;
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .drawer-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 30;
+        display: flex;
+        justify-content: flex-end;
+        background: rgba(17, 24, 39, 0.36);
+      }
+
+      .drawer {
+        width: min(460px, 100vw);
+        height: 100%;
+        overflow-y: auto;
+        border-left: 1px solid var(--line);
+        background: #fff;
+        padding: 18px;
+        box-shadow: -20px 0 48px rgba(17, 24, 39, 0.18);
+      }
+
+      .drawer-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .drawer-header h2 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 950;
+      }
+
+      .drawer-header p {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .tabs,
+      .provider-tabs {
+        display: grid;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+      }
+
+      .tabs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        margin-bottom: 16px;
+      }
+
+      .provider-tabs {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        margin-bottom: 16px;
+      }
+
+      .tabs button,
+      .provider-tabs button {
+        min-height: 42px;
+        border: 0;
+        border-right: 1px solid var(--line);
+        background: transparent;
+        color: var(--muted);
+        font-weight: 900;
+      }
+
+      .tabs button:last-child,
+      .provider-tabs button:last-child {
+        border-right: 0;
+      }
+
+      .tabs button.active,
+      .provider-tabs button.active {
+        background: var(--brand);
+        color: #fff;
+      }
+
+      .settings-grid {
+        display: grid;
+        gap: 14px;
+      }
+
+      .box {
+        min-width: 0;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 13px;
+        display: grid;
+        gap: 12px;
+      }
+
+      .box-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .box h3 {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 950;
+        text-transform: uppercase;
+      }
+
+      label {
+        display: grid;
+        gap: 6px;
+      }
+
+      label span {
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .field {
+        width: 100%;
+        min-height: 44px;
+        border: 1px solid #cbd5cf;
+        border-radius: 8px;
+        background: #fff;
+        color: var(--ink);
+        padding: 10px 12px;
+      }
+
+      textarea.field {
+        min-height: 110px;
+        resize: vertical;
+      }
+
+      .field::placeholder {
+        color: #98a2b3;
+      }
+
+      .note {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 750;
+        line-height: 1.55;
+      }
+
+      .codebox {
+        max-width: 100%;
+        max-height: 260px;
+        overflow: auto;
+        border: 1px solid #252525;
+        border-radius: 8px;
+        background: #171717;
+        color: #f8fafc;
+        padding: 12px;
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        font-size: 12px;
+        line-height: 1.6;
+      }
+
+      .toast {
+        position: fixed;
+        right: 16px;
+        bottom: 16px;
+        z-index: 40;
+        max-width: min(440px, calc(100vw - 32px));
+        border: 1px solid #b8e2d7;
+        border-radius: 8px;
+        background: #ecfdf5;
+        color: #064e3b;
+        padding: 12px 14px;
+        font-size: 14px;
+        font-weight: 850;
+        box-shadow: var(--shadow);
+      }
+
+      .mobile-menu {
+        display: none;
+      }
+
+      .sidebar-screen {
+        display: contents;
+      }
+
+      @media (max-width: 900px) {
+        .shell {
+          grid-template-columns: 1fr;
+        }
+
+        .mobile-menu {
+          display: inline-flex;
+        }
+
+        .sidebar-screen {
+          display: none;
+        }
+
+        .sidebar-screen.open {
+          position: fixed;
+          inset: 0;
+          z-index: 24;
+          display: block;
+          background: rgba(17, 24, 39, 0.34);
+        }
+
+        .sidebar {
+          position: fixed;
+          inset: 0 auto 0 0;
+          z-index: 25;
+          width: min(315px, 86vw);
+          transform: translateX(-105%);
+          transition: transform 180ms ease;
+          box-shadow: 18px 0 46px rgba(17, 24, 39, 0.16);
+        }
+
+        .sidebar.open {
+          transform: translateX(0);
+        }
+
+        .topbar {
+          padding: 10px;
+        }
+
+        .chat-scroll {
+          padding: 20px 10px;
+        }
+
+        .prompt-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .composer-wrap {
+          padding: 10px;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .topbar {
+          align-items: flex-start;
+        }
+
+        .topbar-actions {
+          display: grid;
+          justify-items: end;
+          gap: 8px;
+        }
+
+        .empty h2 {
+          font-size: 28px;
+        }
+
+        .message-row,
+        .message-row.user {
+          grid-template-columns: 32px minmax(0, 1fr);
+          gap: 9px;
+        }
+
+        .message-row.user .avatar {
+          grid-column: 1;
+        }
+
+        .message-row.user .bubble {
+          grid-column: 2;
+          justify-self: stretch;
+        }
+
+        .avatar {
+          width: 32px;
+          height: 32px;
+        }
+
+        .composer {
+          grid-template-columns: minmax(0, 1fr) 48px;
+        }
+
+        .composer-meta {
+          display: grid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app" class="shell">
+      <div id="sidebarScreen" class="sidebar-screen"></div>
+      <aside id="sidebar" class="sidebar" aria-label="Riwayat chat">
+        <header class="brand">
+          <img src="icon.svg" alt="" />
+          <div>
+            <div class="brand-title">AI Agent Chat</div>
+            <div class="brand-subtitle">Gemini, Hermes, Ollama</div>
+          </div>
+        </header>
+
+        <button id="newChatButton" class="btn btn-primary" type="button">+ Chat baru</button>
+
+        <nav id="conversationList" class="conversation-list" aria-label="Daftar chat"></nav>
+
+        <footer class="sidebar-footer">
+          <div class="connection-card">
+            <div class="box-head">
+              <strong style="font-size:12px;color:var(--muted);text-transform:uppercase">Koneksi</strong>
+              <span id="statusPill" class="pill"><span class="dot"></span><span>Belum diuji</span></span>
+            </div>
+            <button id="settingsButton" class="btn btn-soft" type="button">Pengaturan</button>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button id="downloadButton" class="btn btn-soft btn-icon" type="button" title="Ekspor chat" aria-label="Ekspor chat">DL</button>
+            <button id="deleteButton" class="btn btn-soft btn-icon" type="button" title="Hapus chat" aria-label="Hapus chat">×</button>
+            <a class="btn btn-soft btn-icon" href="https://ai.google.dev/api/generate-content" target="_blank" rel="noreferrer" title="Gemini docs" aria-label="Gemini docs">?</a>
+          </div>
+        </footer>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div class="topbar-left">
+            <button id="mobileMenuButton" class="btn btn-soft btn-icon mobile-menu" type="button" aria-label="Riwayat">☰</button>
+            <div class="title">
+              <h1 id="chatTitle">Chat baru</h1>
+              <div class="pills">
+                <span id="modelPill" class="pill">gemini-auto</span>
+                <span id="providerPill" class="pill"><span class="dot"></span><span>Gemini</span></span>
+              </div>
+            </div>
+          </div>
+          <div class="topbar-actions">
+            <button id="testButton" class="btn btn-soft" type="button">Uji koneksi</button>
+          <button id="settingsButtonTop" class="btn btn-soft" type="button" aria-label="Pengaturan">Set</button>
+          </div>
+        </header>
+
+        <section id="chatScroll" class="chat-scroll" aria-live="polite">
+          <div id="chatInner" class="chat-inner"></div>
+        </section>
+
+        <footer class="composer-wrap">
+          <form id="composer" class="composer">
+            <textarea id="messageInput" rows="1" placeholder="Kirim pesan..."></textarea>
+            <button id="sendButton" class="btn btn-primary btn-icon" type="submit" aria-label="Kirim">&gt;</button>
+          </form>
+          <div class="composer-meta">
+            <span id="endpointMeta"></span>
+            <span id="modeMeta"></span>
+          </div>
+        </footer>
+      </main>
+
+      <div id="drawerBackdrop" class="drawer-backdrop" hidden>
+        <aside class="drawer" aria-label="Pengaturan">
+          <header class="drawer-header">
+            <div>
+              <h2>Pengaturan</h2>
+              <p>Credential hanya disimpan di browser perangkat ini.</p>
+            </div>
+            <button id="closeDrawerButton" class="btn btn-soft btn-icon" type="button" aria-label="Tutup">×</button>
+          </header>
+
+          <div class="tabs">
+            <button id="connectionTab" class="active" type="button">Koneksi</button>
+            <button id="setupTab" type="button">Setup</button>
+          </div>
+
+          <section id="connectionPanel" class="settings-grid">
+            <div class="provider-tabs">
+              <button data-provider="gemini" class="active" type="button">Gemini</button>
+              <button data-provider="hermes" type="button">Hermes</button>
+              <button data-provider="ollama" type="button">Ollama</button>
+            </div>
+
+            <div class="box">
+              <div class="box-head">
+                <h3>Gemini API</h3>
+                <span id="geminiStatus" class="pill"><span class="dot"></span><span>Belum diuji</span></span>
+              </div>
+              <label>
+                <span>API key</span>
+                <input id="geminiKey" class="field" type="password" autocomplete="off" placeholder="Paste Gemini API key" />
+              </label>
+              <label>
+                <span>Model</span>
+                <select id="geminiModel" class="field">
+                  <option value="auto">Auto fallback (recommended)</option>
+                  <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+                  <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+                  <option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite</option>
+                  <option value="gemini-3.5-flash">gemini-3.5-flash</option>
+                </select>
+              </label>
+              <label>
+                <span>Endpoint</span>
+                <input id="geminiEndpoint" class="field" value="https://generativelanguage.googleapis.com/v1beta" />
+              </label>
+              <p class="note">
+                Kalau Gemini membalas 503 atau 429, app otomatis mencoba model fallback berikutnya.
+              </p>
+              <div style="display:grid;grid-template-columns:1fr auto;gap:8px">
+                <button id="testGeminiButton" class="btn btn-primary" type="button">Uji Gemini</button>
+                <button id="saveSettingsButton" class="btn btn-soft" type="button" title="Simpan" aria-label="Simpan">OK</button>
+              </div>
+            </div>
+
+            <div class="box">
+              <div class="box-head">
+                <h3>Hermes Gateway</h3>
+                <span id="hermesStatus" class="pill"><span class="dot"></span><span>Belum diuji</span></span>
+              </div>
+              <label>
+                <span>Base URL</span>
+                <input id="hermesBaseUrl" class="field" value="http://127.0.0.1:8642/v1" />
+              </label>
+              <label>
+                <span>Bearer token</span>
+                <input id="hermesToken" class="field" type="password" autocomplete="off" value="change-me-local-dev" />
+              </label>
+              <label>
+                <span>Model</span>
+                <input id="hermesModel" class="field" value="hermes-agent" />
+              </label>
+              <button id="testHermesButton" class="btn btn-soft" type="button">Uji Hermes</button>
+            </div>
+
+            <div class="box">
+              <div class="box-head">
+                <h3>Ollama</h3>
+                <span id="ollamaStatus" class="pill"><span class="dot"></span><span>Belum diuji</span></span>
+              </div>
+              <label>
+                <span>Host</span>
+                <input id="ollamaBaseUrl" class="field" value="http://127.0.0.1:11434" />
+              </label>
+              <label>
+                <span>Model</span>
+                <input id="ollamaModel" class="field" value="gemma4" />
+              </label>
+              <button id="testOllamaButton" class="btn btn-soft" type="button">Uji Ollama</button>
+            </div>
+
+            <div class="box">
+              <h3>Chat</h3>
+              <label>
+                <span>System prompt</span>
+                <textarea id="systemPrompt" class="field">You are a practical AI assistant. Be concise, accurate, and helpful. If a provider is overloaded, explain that clearly and suggest retrying or switching model.</textarea>
+              </label>
+            </div>
+          </section>
+
+          <section id="setupPanel" class="settings-grid" hidden>
+            <div class="box">
+              <div class="box-head">
+                <h3>GitHub Pages</h3>
+                <button class="btn btn-soft copy-button" type="button" data-copy="githubSnippet">Copy</button>
+              </div>
+              <pre id="githubSnippet" class="codebox"></pre>
+            </div>
+            <div class="box">
+              <div class="box-head">
+                <h3>Gemini curl</h3>
+                <button class="btn btn-soft copy-button" type="button" data-copy="geminiSnippet">Copy</button>
+              </div>
+              <pre id="geminiSnippet" class="codebox"></pre>
+            </div>
+            <div class="box">
+              <div class="box-head">
+                <h3>Hermes + Ollama</h3>
+                <button class="btn btn-soft copy-button" type="button" data-copy="localSnippet">Copy</button>
+              </div>
+              <pre id="localSnippet" class="codebox"></pre>
+            </div>
+          </section>
+        </aside>
+      </div>
+
+      <div id="toast" class="toast" hidden></div>
+    </div>
+
+    <script>
+      const SETTINGS_KEY = "ai-agent-chat-settings-v1";
+      const CONVERSATIONS_KEY = "ai-agent-chat-conversations-v1";
+
+      const DEFAULTS = {
+        provider: "gemini",
+        geminiEndpoint: "https://generativelanguage.googleapis.com/v1beta",
+        geminiModel: "auto",
+        geminiKey: "",
+        hermesBaseUrl: "http://127.0.0.1:8642/v1",
+        hermesToken: "change-me-local-dev",
+        hermesModel: "hermes-agent",
+        ollamaBaseUrl: "http://127.0.0.1:11434",
+        ollamaModel: "gemma4",
+        systemPrompt:
+          "You are a practical AI assistant. Be concise, accurate, and helpful. If a provider is overloaded, explain that clearly and suggest retrying or switching model."
+      };
+
+      const GEMINI_FALLBACK_MODELS = [
+        "gemini-2.5-flash",
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-lite",
+        "gemini-3.5-flash"
+      ];
+
+      const prompts = [
+        {
+          title: "Cek koneksi",
+          text: "Kirim pesan singkat untuk memastikan provider aktif dan jawab hanya dengan status singkat.",
+          body: "Cek koneksi provider AI yang aktif. Jawab singkat: provider, model, dan status."
+        },
+        {
+          title: "Buat rencana",
+          text: "Ubah target kerja menjadi langkah yang bisa dieksekusi.",
+          body: "Buat rencana kerja praktis untuk menyelesaikan tugas saya hari ini. Susun dalam langkah singkat."
+        },
+        {
+          title: "Debug error",
+          text: "Analisis error dan beri perbaikan paling mungkin.",
+          body: "Bantu debug error berikut. Jelaskan penyebab paling mungkin dan langkah perbaikannya."
+        },
+        {
+          title: "Ringkas proyek",
+          text: "Buat ringkasan teknis yang jelas dan ringkas.",
+          body: "Ringkas proyek ini, jelaskan fitur utama, risiko, dan langkah berikutnya."
+        }
+      ];
+
+      const state = {
+        settings: { ...DEFAULTS },
+        conversations: [],
+        activeConversationId: null,
+        statuses: {
+          gemini: { state: "idle", label: "Belum diuji" },
+          hermes: { state: "idle", label: "Belum diuji" },
+          ollama: { state: "idle", label: "Belum diuji" }
+        },
+        drawerOpen: false,
+        sidebarOpen: false,
+        activeDrawerTab: "connection",
+        sending: false,
+        abortController: null
+      };
+
+      const $ = (id) => document.getElementById(id);
+      const makeId = () =>
+        window.crypto?.randomUUID ? window.crypto.randomUUID() : `id-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+      function nowTime() {
+        return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      }
+
+      function normalizeUrl(value) {
+        return String(value || "").trim().replace(/\/+$/, "");
+      }
+
+      function joinUrl(base, path) {
+        return `${normalizeUrl(base)}${path.startsWith("/") ? path : `/${path}`}`;
+      }
+
+      function activeConversation() {
+        return state.conversations.find((item) => item.id === state.activeConversationId) || state.conversations[0];
+      }
+
+      function defaultConversation() {
+        const time = Date.now();
+        return {
+          id: makeId(),
+          title: "Chat baru",
+          createdAt: time,
+          updatedAt: time,
+          messages: []
+        };
+      }
+
+      function loadState() {
+        try {
+          state.settings = { ...DEFAULTS, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}") };
+        } catch {
+          state.settings = { ...DEFAULTS };
+        }
+
+        try {
+          const saved = JSON.parse(localStorage.getItem(CONVERSATIONS_KEY) || "{}");
+          if (Array.isArray(saved.conversations) && saved.conversations.length) {
+            state.conversations = saved.conversations;
+            state.activeConversationId = saved.activeConversationId || saved.conversations[0].id;
+          }
+        } catch {
+          localStorage.removeItem(CONVERSATIONS_KEY);
+        }
+
+        if (!state.conversations.length) {
+          const conversation = defaultConversation();
+          state.conversations = [conversation];
+          state.activeConversationId = conversation.id;
+        }
+      }
+
+      function saveSettings() {
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings));
+      }
+
+      function saveConversations() {
+        localStorage.setItem(
+          CONVERSATIONS_KEY,
+          JSON.stringify({
+            conversations: state.conversations.slice(0, 40),
+            activeConversationId: state.activeConversationId
+          })
+        );
+      }
+
+      function readSettingsFromForm() {
+        state.settings.provider = document.querySelector(".provider-tabs button.active")?.dataset.provider || state.settings.provider;
+        state.settings.geminiKey = $("geminiKey").value.trim();
+        state.settings.geminiModel = $("geminiModel").value;
+        state.settings.geminiEndpoint = $("geminiEndpoint").value.trim() || DEFAULTS.geminiEndpoint;
+        state.settings.hermesBaseUrl = $("hermesBaseUrl").value.trim() || DEFAULTS.hermesBaseUrl;
+        state.settings.hermesToken = $("hermesToken").value;
+        state.settings.hermesModel = $("hermesModel").value.trim() || DEFAULTS.hermesModel;
+        state.settings.ollamaBaseUrl = $("ollamaBaseUrl").value.trim() || DEFAULTS.ollamaBaseUrl;
+        state.settings.ollamaModel = $("ollamaModel").value.trim() || DEFAULTS.ollamaModel;
+        state.settings.systemPrompt = $("systemPrompt").value;
+        saveSettings();
+      }
+
+      function writeSettingsToForm() {
+        $("geminiKey").value = state.settings.geminiKey || "";
+        $("geminiModel").value = state.settings.geminiModel || "auto";
+        $("geminiEndpoint").value = state.settings.geminiEndpoint || DEFAULTS.geminiEndpoint;
+        $("hermesBaseUrl").value = state.settings.hermesBaseUrl || DEFAULTS.hermesBaseUrl;
+        $("hermesToken").value = state.settings.hermesToken || DEFAULTS.hermesToken;
+        $("hermesModel").value = state.settings.hermesModel || DEFAULTS.hermesModel;
+        $("ollamaBaseUrl").value = state.settings.ollamaBaseUrl || DEFAULTS.ollamaBaseUrl;
+        $("ollamaModel").value = state.settings.ollamaModel || DEFAULTS.ollamaModel;
+        $("systemPrompt").value = state.settings.systemPrompt || DEFAULTS.systemPrompt;
+        document.querySelectorAll(".provider-tabs button").forEach((button) => {
+          button.classList.toggle("active", button.dataset.provider === state.settings.provider);
+        });
+      }
+
+      function providerLabel(provider = state.settings.provider) {
+        if (provider === "gemini") return "Gemini";
+        if (provider === "hermes") return "Hermes";
+        return "Ollama";
+      }
+
+      function assistantLabel() {
+        return providerLabel().toUpperCase();
+      }
+
+      function activeModelLabel() {
+        if (state.settings.provider === "gemini") return state.settings.geminiModel === "auto" ? "gemini-auto" : state.settings.geminiModel;
+        if (state.settings.provider === "hermes") return state.settings.hermesModel || DEFAULTS.hermesModel;
+        return state.settings.ollamaModel || DEFAULTS.ollamaModel;
+      }
+
+      function activeEndpointLabel() {
+        if (state.settings.provider === "gemini") {
+          const model = state.settings.geminiModel === "auto" ? GEMINI_FALLBACK_MODELS[0] : state.settings.geminiModel;
+          return joinUrl(state.settings.geminiEndpoint, `/models/${model}:generateContent`);
+        }
+        if (state.settings.provider === "hermes") return joinUrl(state.settings.hermesBaseUrl, "/chat/completions");
+        const base = normalizeUrl(state.settings.ollamaBaseUrl).endsWith("/v1")
+          ? normalizeUrl(state.settings.ollamaBaseUrl)
+          : `${normalizeUrl(state.settings.ollamaBaseUrl)}/v1`;
+        return joinUrl(base, "/chat/completions");
+      }
+
+      function statusDotClass(status) {
+        if (status.state === "ok") return "dot ok";
+        if (status.state === "bad") return "dot bad";
+        if (status.state === "checking") return "dot warn";
+        return "dot";
+      }
+
+      function setStatus(provider, stateName, label) {
+        state.statuses[provider] = { state: stateName, label };
+        render();
+      }
+
+      function showToast(message) {
+        const toast = $("toast");
+        toast.textContent = message;
+        toast.hidden = false;
+        clearTimeout(showToast.timer);
+        showToast.timer = setTimeout(() => {
+          toast.hidden = true;
+        }, 2800);
+      }
+
+      function relativeTime(value) {
+        const minutes = Math.floor(Math.max(0, Date.now() - value) / 60000);
+        if (minutes < 1) return "baru";
+        if (minutes < 60) return `${minutes}m`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours}j`;
+        return `${Math.floor(hours / 24)}h`;
+      }
+
+      function renderConversations() {
+        const list = $("conversationList");
+        const conversations = [...state.conversations].sort((a, b) => b.updatedAt - a.updatedAt);
+        list.innerHTML = conversations
+          .map((conversation) => {
+            const last = [...conversation.messages].reverse().find((message) => message.content);
+            const preview = last ? last.content.replace(/\s+/g, " ").slice(0, 90) : "Belum ada pesan";
+            return `
+              <button class="conversation ${conversation.id === state.activeConversationId ? "active" : ""}" data-id="${conversation.id}" type="button">
+                <span class="conversation-line">
+                  <span class="conversation-title">${escapeHtml(conversation.title)}</span>
+                  <span class="conversation-time">${relativeTime(conversation.updatedAt)}</span>
+                </span>
+                <span class="conversation-preview">${escapeHtml(preview)}</span>
+              </button>
+            `;
+          })
+          .join("");
+      }
+
+      function renderEmpty() {
+        return `
+          <div class="empty">
+            <div>
+              <h2>Apa yang ingin kamu kerjakan?</h2>
+              <p>
+                Mode aktif: ${providerLabel()}. Untuk Gemini, pilih model Auto supaya app bisa pindah model saat Gemini membalas overload 503 atau rate limit 429.
+              </p>
+            </div>
+            <div class="prompt-grid">
+              ${prompts
+                .map(
+                  (prompt, index) => `
+                    <button class="prompt-card" type="button" data-prompt="${index}">
+                      <strong>${escapeHtml(prompt.title)}</strong>
+                      <span>${escapeHtml(prompt.text)}</span>
+                    </button>
+                  `
+                )
+                .join("")}
+            </div>
+          </div>
+        `;
+      }
+
+      function renderMessages() {
+        const conversation = activeConversation();
+        const inner = $("chatInner");
+        if (!conversation.messages.length) {
+          inner.innerHTML = renderEmpty();
+          return;
+        }
+
+        inner.innerHTML = conversation.messages
+          .map((message) => {
+            const role = message.role === "user" ? "YOU" : message.label || assistantLabel();
+            const body = message.pending && !message.content
+              ? '<span class="typing"><span></span><span></span><span></span></span>'
+              : `<div class="message-text">${escapeHtml(message.content)}</div>`;
+            return `
+              <article class="message-row ${message.role}">
+                <div class="avatar">${message.role === "user" ? "U" : "AI"}</div>
+                <div class="bubble ${message.error ? "error" : ""}">
+                  <div class="bubble-head">
+                    <span class="bubble-role">${escapeHtml(role)}</span>
+                    <span class="bubble-time">${escapeHtml(message.time || "")}</span>
+                  </div>
+                  ${body}
+                </div>
+              </article>
+            `;
+          })
+          .join("");
+      }
+
+      function renderStatusPill(element, provider) {
+        const status = state.statuses[provider];
+        element.innerHTML = `<span class="${statusDotClass(status)}"></span><span>${escapeHtml(status.label)}</span>`;
+      }
+
+      function render() {
+        const conversation = activeConversation();
+        $("chatTitle").textContent = conversation?.title || "Chat baru";
+        $("modelPill").textContent = activeModelLabel();
+        renderStatusPill($("providerPill"), state.settings.provider);
+        $("providerPill").lastElementChild.textContent = providerLabel();
+        renderStatusPill($("statusPill"), state.settings.provider);
+        renderStatusPill($("geminiStatus"), "gemini");
+        renderStatusPill($("hermesStatus"), "hermes");
+        renderStatusPill($("ollamaStatus"), "ollama");
+        $("endpointMeta").textContent = activeEndpointLabel();
+        $("modeMeta").textContent = state.settings.provider === "gemini" ? "Auto fallback aktif" : "OpenAI-compatible";
+        $("drawerBackdrop").hidden = !state.drawerOpen;
+        $("sidebar").classList.toggle("open", state.sidebarOpen);
+        $("sidebarScreen").classList.toggle("open", state.sidebarOpen);
+        $("connectionPanel").hidden = state.activeDrawerTab !== "connection";
+        $("setupPanel").hidden = state.activeDrawerTab !== "setup";
+        $("connectionTab").classList.toggle("active", state.activeDrawerTab === "connection");
+        $("setupTab").classList.toggle("active", state.activeDrawerTab === "setup");
+        $("sendButton").textContent = state.sending ? "X" : ">";
+        $("sendButton").setAttribute("aria-label", state.sending ? "Stop" : "Kirim");
+        renderConversations();
+        renderMessages();
+        renderSnippets();
+      }
+
+      function renderSnippets() {
+        $("githubSnippet").textContent = [
+          "gh auth login",
+          "gh repo create ai-agent-chat --public --source=. --remote=origin --push",
+          "",
+          "# GitHub Pages:",
+          "# Settings > Pages > Build and deployment > GitHub Actions",
+          "# Workflow sudah tersedia di .github/workflows/pages.yml"
+        ].join("\n");
+
+        const selected = state.settings.geminiModel === "auto" ? GEMINI_FALLBACK_MODELS[0] : state.settings.geminiModel;
+        $("geminiSnippet").textContent = [
+          "export GEMINI_API_KEY='YOUR_GEMINI_API_KEY'",
+          `curl "${joinUrl(state.settings.geminiEndpoint, `/models/${selected}:generateContent`)}?key=$GEMINI_API_KEY" \\`,
+          "  -H 'Content-Type: application/json' \\",
+          "  -d '{\"contents\":[{\"parts\":[{\"text\":\"Halo Gemini\"}]}]}'"
+        ].join("\n");
+
+        $("localSnippet").textContent = [
+          "ollama serve",
+          `ollama pull ${state.settings.ollamaModel || DEFAULTS.ollamaModel}`,
+          "",
+          "hermes gateway",
+          `curl ${joinUrl(state.settings.hermesBaseUrl, "/chat/completions")} \\`,
+          `  -H "Authorization: Bearer ${state.settings.hermesToken || DEFAULTS.hermesToken}" \\`,
+          "  -H 'Content-Type: application/json' \\",
+          `  -d '{"model":"${state.settings.hermesModel || DEFAULTS.hermesModel}","messages":[{"role":"user","content":"Halo"}]}'`
+        ].join("\n");
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      function scrollChat() {
+        requestAnimationFrame(() => {
+          const scroller = $("chatScroll");
+          scroller.scrollTop = scroller.scrollHeight;
+        });
+      }
+
+      function resizeInput() {
+        const input = $("messageInput");
+        input.style.height = "auto";
+        input.style.height = `${Math.min(input.scrollHeight, 180)}px`;
+      }
+
+      function newConversation() {
+        const conversation = defaultConversation();
+        state.conversations.unshift(conversation);
+        state.activeConversationId = conversation.id;
+        state.sidebarOpen = false;
+        saveConversations();
+        render();
+        $("messageInput").focus();
+      }
+
+      function deleteConversation() {
+        state.conversations = state.conversations.filter((conversation) => conversation.id !== state.activeConversationId);
+        if (!state.conversations.length) state.conversations = [defaultConversation()];
+        state.activeConversationId = state.conversations[0].id;
+        saveConversations();
+        render();
+        showToast("Chat dihapus.");
+      }
+
+      function providerHeaders(provider) {
+        if (provider === "hermes") {
+          const headers = { "Content-Type": "application/json" };
+          if (state.settings.hermesToken) headers.Authorization = `Bearer ${state.settings.hermesToken}`;
+          return headers;
+        }
+        return { "Content-Type": "application/json" };
+      }
+
+      function buildOpenAiMessages(conversation) {
+        const messages = conversation.messages
+          .filter((message) => ["user", "assistant"].includes(message.role))
+          .filter((message) => !message.error && !message.pending && message.content)
+          .map((message) => ({ role: message.role, content: message.content }));
+        if (state.settings.systemPrompt.trim()) {
+          messages.unshift({ role: "system", content: state.settings.systemPrompt.trim() });
+        }
+        return messages;
+      }
+
+      function buildGeminiContents(conversation) {
+        return conversation.messages
+          .filter((message) => ["user", "assistant"].includes(message.role))
+          .filter((message) => !message.error && !message.pending && message.content)
+          .map((message) => ({
+            role: message.role === "assistant" ? "model" : "user",
+            parts: [{ text: message.content }]
+          }));
+      }
+
+      function geminiModelsToTry() {
+        const selected = state.settings.geminiModel || "auto";
+        if (selected === "auto") return [...GEMINI_FALLBACK_MODELS];
+        return [selected, ...GEMINI_FALLBACK_MODELS.filter((model) => model !== selected)];
+      }
+
+      function geminiUrl(model) {
+        const url = new URL(joinUrl(state.settings.geminiEndpoint, `/models/${model}:generateContent`));
+        url.searchParams.set("key", state.settings.geminiKey);
+        return url.toString();
+      }
+
+      function makeGeminiPayload(conversation) {
+        const payload = {
+          contents: buildGeminiContents(conversation),
+          generationConfig: {
+            temperature: 0.7
+          }
+        };
+        if (state.settings.systemPrompt.trim()) {
+          payload.systemInstruction = {
+            parts: [{ text: state.settings.systemPrompt.trim() }]
+          };
+        }
+        return payload;
+      }
+
+      async function sendGemini(conversation, assistantMessage) {
+        if (!state.settings.geminiKey) {
+          throw new Error("Gemini API key belum diisi. Buka Pengaturan > Gemini API, paste API key, lalu klik Uji Gemini.");
+        }
+
+        const payload = makeGeminiPayload(conversation);
+        const attempted = [];
+        let lastError = null;
+
+        for (const model of geminiModelsToTry()) {
+          attempted.push(model);
+          assistantMessage.label = `GEMINI (${model})`;
+          assistantMessage.content = attempted.length > 1
+            ? `Model sebelumnya sedang sibuk. Mencoba ${model}...`
+            : "";
+          render();
+          scrollChat();
+
+          const response = await fetch(geminiUrl(model), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+            signal: state.abortController.signal
+          });
+
+          if (response.ok) {
+            const json = await response.json();
+            assistantMessage.content = extractGeminiText(json);
+            assistantMessage.model = model;
+            setStatus("gemini", "ok", `Online: ${model}`);
+            return;
+          }
+
+          const apiError = await readApiError(response, "Gemini");
+          lastError = apiError;
+          if (![429, 503].includes(response.status)) break;
+          await sleep(450);
+        }
+
+        const message = lastError?.message || "Gemini request gagal.";
+        throw new Error(
+          `${message}\n\nModel yang dicoba: ${attempted.join(", ")}\n\n` +
+            "Jika ini 503/UNAVAILABLE, penyebabnya model Gemini sedang overload. App sudah mencoba fallback; tunggu sebentar atau pilih model lain di Pengaturan."
+        );
+      }
+
+      async function sendOpenAiCompatible(conversation, assistantMessage) {
+        const provider = state.settings.provider;
+        const isHermes = provider === "hermes";
+        const base = isHermes
+          ? state.settings.hermesBaseUrl
+          : normalizeUrl(state.settings.ollamaBaseUrl).endsWith("/v1")
+            ? state.settings.ollamaBaseUrl
+            : `${normalizeUrl(state.settings.ollamaBaseUrl)}/v1`;
+        const model = isHermes ? state.settings.hermesModel : state.settings.ollamaModel;
+        const response = await fetch(joinUrl(base, "/chat/completions"), {
+          method: "POST",
+          headers: providerHeaders(provider),
+          body: JSON.stringify({
+            model,
+            messages: buildOpenAiMessages(conversation),
+            stream: false
+          }),
+          signal: state.abortController.signal
+        });
+
+        if (!response.ok) throw new Error((await readApiError(response, providerLabel(provider))).message);
+        const json = await response.json();
+        assistantMessage.content = extractOpenAiText(json);
+        assistantMessage.label = providerLabel(provider).toUpperCase();
+        setStatus(provider, "ok", "Online");
+      }
+
+      function extractGeminiText(json) {
+        const parts = json.candidates?.[0]?.content?.parts || [];
+        const text = parts.map((part) => part.text || "").filter(Boolean).join("");
+        if (text) return text;
+        if (json.promptFeedback?.blockReason) return `Request diblokir: ${json.promptFeedback.blockReason}`;
+        return JSON.stringify(json, null, 2);
+      }
+
+      function extractOpenAiText(json) {
+        return json.choices?.[0]?.message?.content || json.choices?.[0]?.text || JSON.stringify(json, null, 2);
+      }
+
+      async function readApiError(response, provider) {
+        let detail = "";
+        try {
+          const json = await response.json();
+          detail = json.error?.message || json.message || JSON.stringify(json, null, 2);
+        } catch {
+          detail = await response.text();
+        }
+        const status = response.status;
+        const prefix = `${provider} error ${status}`;
+        if (provider === "Gemini" && status === 503) {
+          return { status, message: `${prefix}: Model sedang overload atau high demand sementara.` };
+        }
+        if (provider === "Gemini" && status === 429) {
+          return { status, message: `${prefix}: Rate limit tercapai. Tunggu sebentar atau pakai model fallback.` };
+        }
+        if (provider === "Gemini" && [400, 401, 403].includes(status)) {
+          return { status, message: `${prefix}: Credential/API key atau akses model tidak valid. Detail: ${detail}` };
+        }
+        return { status, message: `${prefix}: ${detail || response.statusText}` };
+      }
+
+      function sleep(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      }
+
+      async function sendMessage() {
+        if (state.sending) {
+          state.abortController?.abort();
+          return;
+        }
+
+        readSettingsFromForm();
+        const text = $("messageInput").value.trim();
+        if (!text) return;
+
+        const conversation = activeConversation();
+        if (!conversation.messages.length) conversation.title = text.slice(0, 56);
+        conversation.updatedAt = Date.now();
+        conversation.messages.push({
+          id: makeId(),
+          role: "user",
+          content: text,
+          time: nowTime()
+        });
+
+        const assistantMessage = {
+          id: makeId(),
+          role: "assistant",
+          label: assistantLabel(),
+          content: "",
+          pending: true,
+          time: nowTime()
+        };
+        conversation.messages.push(assistantMessage);
+
+        $("messageInput").value = "";
+        resizeInput();
+        state.sending = true;
+        state.abortController = new AbortController();
+        saveConversations();
+        render();
+        scrollChat();
+
+        try {
+          if (state.settings.provider === "gemini") await sendGemini(conversation, assistantMessage);
+          else await sendOpenAiCompatible(conversation, assistantMessage);
+          assistantMessage.error = false;
+        } catch (error) {
+          assistantMessage.error = true;
+          assistantMessage.content = error.name === "AbortError" ? "Generasi dihentikan." : error.message;
+          setStatus(state.settings.provider, "bad", "Gagal");
+        } finally {
+          assistantMessage.pending = false;
+          conversation.updatedAt = Date.now();
+          state.sending = false;
+          state.abortController = null;
+          saveConversations();
+          render();
+          scrollChat();
+        }
+      }
+
+      async function testActiveProvider() {
+        readSettingsFromForm();
+        if (state.settings.provider === "gemini") return testGemini();
+        if (state.settings.provider === "hermes") return testHermes();
+        return testOllama();
+      }
+
+      async function testGemini() {
+        readSettingsFromForm();
+        if (!state.settings.geminiKey) {
+          state.drawerOpen = true;
+          render();
+          showToast("Paste Gemini API key dulu.");
+          return;
+        }
+        setStatus("gemini", "checking", "Menguji");
+        const tempConversation = {
+          messages: [{ role: "user", content: "Jawab hanya: ok", time: nowTime() }]
+        };
+        const tempMessage = { content: "", label: "GEMINI" };
+        state.abortController = new AbortController();
+        try {
+          await sendGemini(tempConversation, tempMessage);
+          setStatus("gemini", "ok", tempMessage.model || "Online");
+          showToast("Gemini terhubung.");
+        } catch (error) {
+          setStatus("gemini", "bad", "Gagal");
+          showToast(error.message.slice(0, 140));
+        } finally {
+          state.abortController = null;
+          render();
+        }
+      }
+
+      async function testHermes() {
+        readSettingsFromForm();
+        setStatus("hermes", "checking", "Menguji");
+        try {
+          const response = await fetch(joinUrl(state.settings.hermesBaseUrl, "/models"), {
+            headers: providerHeaders("hermes")
+          });
+          if (!response.ok) throw new Error((await readApiError(response, "Hermes")).message);
+          setStatus("hermes", "ok", "Online");
+          showToast("Hermes terhubung.");
+        } catch (error) {
+          setStatus("hermes", "bad", "Gagal");
+          showToast(error.message.slice(0, 140));
+        }
+      }
+
+      async function testOllama() {
+        readSettingsFromForm();
+        setStatus("ollama", "checking", "Menguji");
+        try {
+          const response = await fetch(joinUrl(state.settings.ollamaBaseUrl, "/api/tags"));
+          if (!response.ok) throw new Error((await readApiError(response, "Ollama")).message);
+          setStatus("ollama", "ok", "Online");
+          showToast("Ollama terhubung.");
+        } catch (error) {
+          setStatus("ollama", "bad", "Gagal");
+          showToast(error.message.slice(0, 140));
+        }
+      }
+
+      function exportTranscript() {
+        const conversation = activeConversation();
+        const transcript = conversation.messages
+          .map((message) => `[${message.time}] ${(message.label || message.role).toUpperCase()}\n${message.content}`)
+          .join("\n\n---\n\n");
+        const blob = new Blob([transcript || conversation.title], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `${conversation.title.replace(/[^a-z0-9-]+/gi, "-").slice(0, 44) || "ai-chat"}.txt`;
+        link.click();
+        URL.revokeObjectURL(url);
+      }
+
+      function copyTextFromElement(id) {
+        navigator.clipboard.writeText($(id).textContent).then(
+          () => showToast("Disalin."),
+          () => showToast("Gagal menyalin.")
+        );
+      }
+
+      function bindEvents() {
+        $("newChatButton").addEventListener("click", newConversation);
+        $("deleteButton").addEventListener("click", deleteConversation);
+        $("downloadButton").addEventListener("click", exportTranscript);
+        $("settingsButton").addEventListener("click", () => {
+          state.drawerOpen = true;
+          render();
+        });
+        $("settingsButtonTop").addEventListener("click", () => {
+          state.drawerOpen = true;
+          render();
+        });
+        $("testButton").addEventListener("click", testActiveProvider);
+        $("closeDrawerButton").addEventListener("click", () => {
+          state.drawerOpen = false;
+          readSettingsFromForm();
+          render();
+        });
+        $("drawerBackdrop").addEventListener("click", (event) => {
+          if (event.target === $("drawerBackdrop")) {
+            state.drawerOpen = false;
+            readSettingsFromForm();
+            render();
+          }
+        });
+        $("mobileMenuButton").addEventListener("click", () => {
+          state.sidebarOpen = true;
+          render();
+        });
+        $("sidebarScreen").addEventListener("click", () => {
+          state.sidebarOpen = false;
+          render();
+        });
+        $("conversationList").addEventListener("click", (event) => {
+          const button = event.target.closest(".conversation");
+          if (!button) return;
+          state.activeConversationId = button.dataset.id;
+          state.sidebarOpen = false;
+          saveConversations();
+          render();
+          scrollChat();
+        });
+        $("chatInner").addEventListener("click", (event) => {
+          const button = event.target.closest("[data-prompt]");
+          if (!button) return;
+          $("messageInput").value = prompts[Number(button.dataset.prompt)].body;
+          resizeInput();
+          $("messageInput").focus();
+        });
+        $("composer").addEventListener("submit", (event) => {
+          event.preventDefault();
+          sendMessage();
+        });
+        $("messageInput").addEventListener("input", resizeInput);
+        $("messageInput").addEventListener("keydown", (event) => {
+          if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
+            sendMessage();
+          }
+        });
+        $("connectionTab").addEventListener("click", () => {
+          state.activeDrawerTab = "connection";
+          render();
+        });
+        $("setupTab").addEventListener("click", () => {
+          state.activeDrawerTab = "setup";
+          render();
+        });
+        document.querySelectorAll(".provider-tabs button").forEach((button) => {
+          button.addEventListener("click", () => {
+            document.querySelectorAll(".provider-tabs button").forEach((item) => item.classList.remove("active"));
+            button.classList.add("active");
+            readSettingsFromForm();
+            render();
+          });
+        });
+        $("testGeminiButton").addEventListener("click", testGemini);
+        $("testHermesButton").addEventListener("click", testHermes);
+        $("testOllamaButton").addEventListener("click", testOllama);
+        $("saveSettingsButton").addEventListener("click", () => {
+          readSettingsFromForm();
+          render();
+          showToast("Pengaturan tersimpan.");
+        });
+        document.querySelectorAll("input, select, textarea").forEach((element) => {
+          element.addEventListener("change", () => {
+            readSettingsFromForm();
+            render();
+          });
+        });
+        document.querySelectorAll(".copy-button").forEach((button) => {
+          button.addEventListener("click", () => copyTextFromElement(button.dataset.copy));
+        });
+        window.addEventListener("hashchange", applyHash);
+      }
+
+      function applyHash() {
+        const hash = location.hash.replace("#", "");
+        if (hash === "settings" || hash === "setup") {
+          state.drawerOpen = true;
+          state.activeDrawerTab = hash === "setup" ? "setup" : "connection";
+          render();
+        }
+      }
+
+      loadState();
+      writeSettingsToForm();
+      bindEvents();
+      applyHash();
+      render();
+      resizeInput();
+    </script>
+  </body>
+</html>
