@@ -116,7 +116,7 @@
         min-height: 100vh;
         background: var(--panel);
         display: grid;
-        grid-template-rows: auto minmax(0, 1fr) auto;
+        grid-template-rows: auto auto minmax(0, 1fr) auto;
       }
 
       .topbar {
@@ -308,6 +308,79 @@
         gap: 10px;
       }
 
+      .sidebar-stats {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .stat-card,
+      .ops-card {
+        min-width: 0;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 10px;
+      }
+
+      .stat-card span,
+      .ops-label,
+      .ops-card small {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+
+      .stat-card strong,
+      .ops-value {
+        display: block;
+        margin-top: 6px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 18px;
+        font-weight: 950;
+      }
+
+      .ops-panel {
+        position: relative;
+        z-index: 2;
+        border-bottom: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.92);
+        padding: 12px 18px;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .ops-card {
+        display: grid;
+        gap: 6px;
+      }
+
+      .ops-card small {
+        margin-top: 0;
+        text-transform: none;
+      }
+
+      .meter {
+        height: 8px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: rgba(17, 24, 39, 0.08);
+      }
+
+      .meter-fill {
+        width: 0%;
+        height: 100%;
+        border-radius: inherit;
+        background: var(--brand);
+        transition: width 180ms ease;
+      }
+
       .chat-scroll {
         min-height: 0;
         overflow-y: auto;
@@ -348,6 +421,25 @@
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 10px;
+      }
+
+      .stack-strip {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .stack-strip span {
+        min-height: 30px;
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: #fff;
+        padding: 0 10px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 900;
       }
 
       .prompt-card {
@@ -680,6 +772,38 @@
         font-size: 12px;
         font-weight: 750;
         line-height: 1.55;
+      }
+
+      .security-box {
+        border-color: rgba(245, 158, 11, 0.42);
+        background:
+          linear-gradient(135deg, rgba(245, 158, 11, 0.1), transparent 36%),
+          #fff;
+      }
+
+      .auth-actions {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+      }
+
+      .sensitive-box.is-locked {
+        position: relative;
+      }
+
+      .sensitive-box.is-locked::after {
+        content: "LOCKED";
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        border: 1px solid rgba(245, 158, 11, 0.5);
+        border-radius: 999px;
+        background: rgba(245, 158, 11, 0.14);
+        color: var(--warn);
+        padding: 5px 8px;
+        font-size: 10px;
+        font-weight: 950;
+        letter-spacing: 0;
       }
 
       .codebox {
@@ -1024,7 +1148,9 @@
       .tabs,
       .provider-tabs,
       .codebox,
-      .connection-card {
+      .connection-card,
+      .stat-card,
+      .ops-card {
         border-radius: 2px;
       }
 
@@ -1107,6 +1233,37 @@
           repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.025) 0 8px, transparent 8px 16px);
       }
 
+      .ops-panel {
+        border-bottom: 4px solid #171008;
+        background:
+          linear-gradient(90deg, rgba(12, 18, 14, 0.94), rgba(22, 36, 25, 0.9)),
+          repeating-linear-gradient(90deg, rgba(244, 197, 66, 0.06) 0 10px, transparent 10px 20px);
+        box-shadow: inset 0 -5px 0 rgba(0, 0, 0, 0.2);
+      }
+
+      .ops-label,
+      .ops-card small,
+      .stat-card span {
+        color: #b4d8a6;
+      }
+
+      .ops-value,
+      .stat-card strong {
+        color: #ffe9a6;
+      }
+
+      .meter {
+        border: 3px solid #100b08;
+        border-radius: 2px;
+        background: rgba(5, 8, 6, 0.78);
+      }
+
+      .meter-fill {
+        background:
+          linear-gradient(90deg, #1ea672, #f4c542);
+        box-shadow: 0 0 18px rgba(244, 197, 66, 0.45);
+      }
+
       .chat-inner {
         width: min(940px, 100%);
       }
@@ -1126,7 +1283,9 @@
 
       .prompt-card,
       .box,
-      .connection-card {
+      .connection-card,
+      .stat-card,
+      .ops-card {
         border: 3px solid #100b08;
         border-top-color: #78623d;
         border-left-color: #78623d;
@@ -1150,6 +1309,14 @@
 
       .prompt-card strong {
         color: #ffe9a6;
+      }
+
+      .stack-strip span {
+        border: 3px solid #100b08;
+        border-radius: 2px;
+        background: rgba(13, 24, 17, 0.88);
+        color: #ffe9a6;
+        box-shadow: 0 4px 0 #080604;
       }
 
       .prompt-card span,
@@ -1294,6 +1461,20 @@
           rgba(13, 21, 17, 0.97);
       }
 
+      .security-box {
+        border-color: #f4c542;
+        background:
+          linear-gradient(135deg, rgba(244, 197, 66, 0.12), transparent 32%),
+          rgba(12, 17, 14, 0.92);
+      }
+
+      .sensitive-box.is-locked::after {
+        border: 3px solid #100b08;
+        border-radius: 2px;
+        background: #5a3b20;
+        color: #fff0b8;
+      }
+
       .drawer-header h2,
       .box h3,
       label span {
@@ -1360,6 +1541,11 @@
           width: 100%;
         }
 
+        .ops-panel {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          padding: 10px;
+        }
+
         .topbar-actions .btn {
           min-width: 0;
           padding: 0 10px;
@@ -1396,6 +1582,14 @@
           min-height: 30px;
           padding: 0 8px;
           font-size: 11px;
+        }
+
+        .ops-panel {
+          grid-template-columns: 1fr;
+        }
+
+        .ops-card {
+          min-height: 58px;
         }
 
         .message-row,
@@ -1452,6 +1646,16 @@
         <nav id="conversationList" class="conversation-list" aria-label="Daftar chat"></nav>
 
         <footer class="sidebar-footer">
+          <div class="sidebar-stats" aria-label="Statistik sesi">
+            <div class="stat-card">
+              <span>Chat</span>
+              <strong id="sidebarChatCount">0</strong>
+            </div>
+            <div class="stat-card">
+              <span>Pesan</span>
+              <strong id="sidebarMessageCount">0</strong>
+            </div>
+          </div>
           <div class="connection-card">
             <div class="box-head">
               <strong style="font-size:12px;color:var(--muted);text-transform:uppercase">Koneksi</strong>
@@ -1484,6 +1688,29 @@
           <button id="settingsButtonTop" class="btn btn-soft" type="button" aria-label="Pengaturan">Set</button>
           </div>
         </header>
+
+        <section class="ops-panel" aria-label="Agent console">
+          <div class="ops-card">
+            <span class="ops-label">Runtime</span>
+            <strong id="opsRuntime" class="ops-value">Idle</strong>
+            <small id="opsRuntimeMeta">Hermes standby</small>
+          </div>
+          <div class="ops-card">
+            <span class="ops-label">Model</span>
+            <strong id="opsModel" class="ops-value">Auto</strong>
+            <div class="meter" aria-hidden="true"><span id="opsModelMeter" class="meter-fill"></span></div>
+          </div>
+          <div class="ops-card">
+            <span class="ops-label">Memory</span>
+            <strong id="opsMemory" class="ops-value">0/40</strong>
+            <small id="opsMemoryMeta">Local session</small>
+          </div>
+          <div class="ops-card">
+            <span class="ops-label">Security</span>
+            <strong id="opsSecurity" class="ops-value">Locked</strong>
+            <small id="opsSecurityMeta">API controls gated</small>
+          </div>
+        </section>
 
         <section id="chatScroll" class="chat-scroll" aria-live="polite">
           <div id="chatInner" class="chat-inner"></div>
@@ -1521,7 +1748,25 @@
               <button data-provider="hermes" class="active" type="button">Hermes</button>
             </div>
 
-            <div class="box">
+            <div class="box security-box">
+              <div class="box-head">
+                <h3>Security Gate</h3>
+                <span id="securityPill" class="pill"><span class="dot"></span><span>Locked</span></span>
+              </div>
+              <label>
+                <span>Password</span>
+                <input id="settingsPassword" class="field" type="password" autocomplete="current-password" placeholder="Masukkan password settings" />
+              </label>
+              <div class="auth-actions">
+                <button id="unlockSettingsButton" class="btn btn-primary" type="button">Unlock</button>
+                <button id="lockSettingsButton" class="btn btn-soft" type="button" hidden>Lock</button>
+              </div>
+              <p id="securityNote" class="note">
+                API key, uji koneksi, dan system prompt dikunci sampai password benar.
+              </p>
+            </div>
+
+            <div id="providerBox" class="box sensitive-box">
               <div class="box-head">
                 <h3>Hermes -> Gemini</h3>
                 <span id="hermesStatus" class="pill"><span class="dot"></span><span>Belum diuji</span></span>
@@ -1553,7 +1798,7 @@
               </div>
             </div>
 
-            <div class="box">
+            <div id="promptBox" class="box sensitive-box">
               <h3>Chat</h3>
               <label>
                 <span>System prompt</span>
@@ -1611,6 +1856,8 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.</textarea>
     <script>
       const SETTINGS_KEY = "ai-agent-chat-settings-v1";
       const CONVERSATIONS_KEY = "ai-agent-chat-conversations-v1";
+      const SETTINGS_UNLOCK_KEY = "ai-agent-chat-settings-unlocked-v1";
+      const SETTINGS_PASSWORD_HASH = "e722d5c34797e99be84517dc97a601489b2ab9c16775cfcd055a6a2411349fcd";
       const OLD_SYSTEM_PROMPT =
         "You are a practical AI assistant. Be concise, accurate, and helpful. If a provider is overloaded, explain that clearly and suggest retrying or switching model.";
       const SYSTEM_PERSONA = `Kamu adalah Passeo-ai-Agent dengan persona Grok Toxic Edition: AI yang sangat blak-blakan, sarkastik, dan sedikit brutal.
@@ -1689,6 +1936,9 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         drawerOpen: false,
         sidebarOpen: false,
         activeDrawerTab: "connection",
+        settingsUnlocked: false,
+        lastLatency: null,
+        lastModel: "",
         sending: false,
         abortController: null
       };
@@ -1744,6 +1994,12 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         }
 
         try {
+          state.settingsUnlocked = sessionStorage.getItem(SETTINGS_UNLOCK_KEY) === "1";
+        } catch {
+          state.settingsUnlocked = false;
+        }
+
+        try {
           const saved = JSON.parse(localStorage.getItem(CONVERSATIONS_KEY) || "{}");
           if (Array.isArray(saved.conversations) && saved.conversations.length) {
             state.conversations = saved.conversations;
@@ -1774,12 +2030,76 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         );
       }
 
+      async function sha256Hex(value) {
+        if (!window.crypto?.subtle) {
+          throw new Error("Browser ini tidak mendukung secure hash untuk unlock settings.");
+        }
+        const input = new TextEncoder().encode(value);
+        const digest = await window.crypto.subtle.digest("SHA-256", input);
+        return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+      }
+
+      function setSettingsUnlocked(value) {
+        state.settingsUnlocked = value;
+        try {
+          if (value) sessionStorage.setItem(SETTINGS_UNLOCK_KEY, "1");
+          else sessionStorage.removeItem(SETTINGS_UNLOCK_KEY);
+        } catch {
+          state.settingsUnlocked = value;
+        }
+      }
+
+      function requireSettingsUnlock(message = "Masukkan password settings dulu.") {
+        if (state.settingsUnlocked) return true;
+        state.drawerOpen = true;
+        state.activeDrawerTab = "connection";
+        render();
+        requestAnimationFrame(() => $("settingsPassword")?.focus());
+        showToast(message);
+        return false;
+      }
+
+      async function unlockSettings() {
+        const input = $("settingsPassword");
+        const password = input.value;
+        if (!password) {
+          showToast("Password belum diisi.");
+          input.focus();
+          return;
+        }
+
+        try {
+          const hash = await sha256Hex(password);
+          if (hash !== SETTINGS_PASSWORD_HASH) {
+            input.value = "";
+            showToast("Password salah.");
+            input.focus();
+            return;
+          }
+          setSettingsUnlocked(true);
+          input.value = "";
+          render();
+          showToast("Settings terbuka.");
+        } catch (error) {
+          showToast(error.message);
+        }
+      }
+
+      function lockSettings() {
+        readSettingsFromForm();
+        setSettingsUnlocked(false);
+        render();
+        showToast("Settings dikunci.");
+      }
+
       function readSettingsFromForm() {
         state.settings.provider = document.querySelector(".provider-tabs button.active")?.dataset.provider || state.settings.provider;
-        state.settings.geminiKey = $("geminiKey").value.trim();
-        state.settings.geminiModel = $("geminiModel").value;
-        state.settings.geminiEndpoint = $("geminiEndpoint").value.trim() || DEFAULTS.geminiEndpoint;
-        state.settings.systemPrompt = $("systemPrompt").value;
+        if (state.settingsUnlocked) {
+          state.settings.geminiKey = $("geminiKey").value.trim();
+          state.settings.geminiModel = $("geminiModel").value;
+          state.settings.geminiEndpoint = $("geminiEndpoint").value.trim() || DEFAULTS.geminiEndpoint;
+          state.settings.systemPrompt = $("systemPrompt").value;
+        }
         saveSettings();
       }
 
@@ -1870,6 +2190,12 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
                 Mode aktif: Hermes. Engine tersambung langsung ke Gemini API dengan fallback model otomatis saat traffic sedang padat.
               </p>
             </div>
+            <div class="stack-strip" aria-label="Runtime stack">
+              <span>Client UI</span>
+              <span>Hermes Router</span>
+              <span>Gemini Engine</span>
+              <span>Local Memory</span>
+            </div>
             <div class="prompt-grid">
               ${prompts
                 .map(
@@ -1921,6 +2247,58 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         element.innerHTML = `<span class="${statusDotClass(status)}"></span><span>${escapeHtml(status.label)}</span>`;
       }
 
+      function selectedModelLabel() {
+        return state.settings.geminiModel === "auto" ? "Auto fallback" : state.settings.geminiModel;
+      }
+
+      function sessionStats() {
+        const messageCount = state.conversations.reduce((total, conversation) => total + conversation.messages.length, 0);
+        const activeMessages = activeConversation()?.messages.length || 0;
+        return {
+          chatCount: state.conversations.length,
+          messageCount,
+          activeMessages
+        };
+      }
+
+      function renderSecurityGate() {
+        const unlocked = state.settingsUnlocked;
+        const locked = !unlocked;
+        const status = unlocked ? { state: "ok", label: "Unlocked" } : { state: "checking", label: "Locked" };
+        $("securityPill").innerHTML = `<span class="${statusDotClass(status)}"></span><span>${status.label}</span>`;
+        $("settingsPassword").disabled = unlocked;
+        $("unlockSettingsButton").hidden = unlocked;
+        $("lockSettingsButton").hidden = locked;
+        $("securityNote").textContent = unlocked
+          ? "API key, uji koneksi, model, endpoint, dan system prompt bisa diedit."
+          : "API key, uji koneksi, dan system prompt dikunci sampai password benar.";
+
+        ["geminiKey", "geminiModel", "geminiEndpoint", "systemPrompt", "testHermesButton", "saveSettingsButton"].forEach((id) => {
+          const element = $(id);
+          if (element) element.disabled = locked;
+        });
+        ["providerBox", "promptBox"].forEach((id) => $(id)?.classList.toggle("is-locked", locked));
+      }
+
+      function renderOpsPanel() {
+        const stats = sessionStats();
+        const status = state.statuses.hermes;
+        const runtime = state.sending ? "Running" : status.state === "ok" ? "Online" : status.state === "bad" ? "Error" : "Idle";
+        const runtimeMeta = state.lastLatency ? `${state.lastLatency} ms response` : status.label;
+        const modelHealth = state.statuses.hermes.state === "ok" ? 100 : state.settings.geminiKey ? 72 : 28;
+
+        $("sidebarChatCount").textContent = stats.chatCount;
+        $("sidebarMessageCount").textContent = stats.messageCount;
+        $("opsRuntime").textContent = runtime;
+        $("opsRuntimeMeta").textContent = runtimeMeta;
+        $("opsModel").textContent = state.lastModel || selectedModelLabel();
+        $("opsModelMeter").style.width = `${modelHealth}%`;
+        $("opsMemory").textContent = `${stats.chatCount}/40`;
+        $("opsMemoryMeta").textContent = `${stats.activeMessages} pesan aktif`;
+        $("opsSecurity").textContent = state.settingsUnlocked ? "Unlocked" : "Locked";
+        $("opsSecurityMeta").textContent = state.settingsUnlocked ? "Controls open" : "API controls gated";
+      }
+
       function render() {
         const conversation = activeConversation();
         $("chatTitle").textContent = conversation?.title || "Chat baru";
@@ -1940,6 +2318,8 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         $("setupTab").classList.toggle("active", state.activeDrawerTab === "setup");
         $("sendButton").textContent = state.sending ? "X" : ">";
         $("sendButton").setAttribute("aria-label", state.sending ? "Stop" : "Kirim");
+        renderSecurityGate();
+        renderOpsPanel();
         updateVoxelMood();
         renderConversations();
         renderMessages();
@@ -2048,6 +2428,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           throw new Error("Gemini API key belum diisi. Buka Pengaturan > Hermes -> Gemini, paste API key, lalu klik Uji Hermes.");
         }
 
+        const startedAt = performance.now();
         const payload = makeGeminiPayload(conversation);
         const attempted = [];
         let lastError = null;
@@ -2072,6 +2453,8 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
             const json = await response.json();
             assistantMessage.content = extractGeminiText(json);
             assistantMessage.model = model;
+            state.lastLatency = Math.round(performance.now() - startedAt);
+            state.lastModel = model;
             setStatus("hermes", "ok", `Online: ${APP_NAME}`);
             return;
           }
@@ -2180,11 +2563,11 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       }
 
       async function testActiveProvider() {
-        readSettingsFromForm();
         return testHermes();
       }
 
       async function testHermes() {
+        if (!requireSettingsUnlock("Masukkan password untuk uji koneksi.")) return;
         readSettingsFromForm();
         if (!state.settings.geminiKey) {
           state.drawerOpen = true;
@@ -2618,14 +3001,25 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
             render();
           });
         });
+        $("unlockSettingsButton").addEventListener("click", unlockSettings);
+        $("lockSettingsButton").addEventListener("click", lockSettings);
+        $("settingsPassword").addEventListener("keydown", (event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            unlockSettings();
+          }
+        });
         $("testHermesButton").addEventListener("click", testHermes);
         $("saveSettingsButton").addEventListener("click", () => {
+          if (!requireSettingsUnlock("Masukkan password untuk menyimpan settings.")) return;
           readSettingsFromForm();
           render();
           showToast("Pengaturan tersimpan.");
         });
         document.querySelectorAll("input, select, textarea").forEach((element) => {
           element.addEventListener("change", () => {
+            if (element.id === "settingsPassword") return;
+            if (element.closest(".sensitive-box") && !state.settingsUnlocked) return;
             readSettingsFromForm();
             render();
           });
