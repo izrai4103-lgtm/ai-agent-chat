@@ -6,16 +6,9 @@
     <title>Passeo-ai-Agent</title>
     <meta
       name="description"
-      content="GitHub Pages-ready Hermes AI chat powered by Gemini with a low-poly companion."
+      content="GitHub Pages-ready Hermes AI chat powered by Gemini."
     />
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
-    <script type="importmap">
-      {
-        "imports": {
-          "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
-        }
-      }
-    </script>
     <style>
       :root {
         color-scheme: light;
@@ -831,15 +824,15 @@
         height: 100vh;
         pointer-events: none;
         image-rendering: pixelated;
-        opacity: 0.28;
         background:
-          linear-gradient(180deg, rgba(31, 88, 77, 0.92), rgba(20, 45, 31, 0.86) 48%, rgba(8, 10, 12, 0.96));
+          linear-gradient(180deg, rgba(22, 84, 92, 0.92), rgba(26, 47, 33, 0.84) 44%, rgba(8, 10, 12, 0.96)),
+          repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0 2px, transparent 2px 58px);
       }
 
       .voxel-webgl {
         background: transparent;
-        opacity: 0.88;
-        mix-blend-mode: normal;
+        opacity: 0.82;
+        mix-blend-mode: screen;
       }
 
       body::before,
@@ -852,7 +845,7 @@
       }
 
       body::before {
-        opacity: 0.08;
+        opacity: 0.2;
         background-image:
           linear-gradient(rgba(255, 255, 255, 0.07) 2px, transparent 2px),
           linear-gradient(90deg, rgba(255, 255, 255, 0.07) 2px, transparent 2px);
@@ -862,9 +855,9 @@
 
       body::after {
         background:
-          linear-gradient(180deg, rgba(255, 214, 102, 0.08), transparent 24%),
-          linear-gradient(90deg, rgba(3, 7, 18, 0.24), transparent 22%, transparent 78%, rgba(3, 7, 18, 0.34)),
-          linear-gradient(0deg, rgba(3, 7, 18, 0.42), transparent 38%);
+          linear-gradient(180deg, rgba(255, 214, 102, 0.12), transparent 24%),
+          linear-gradient(90deg, rgba(3, 7, 18, 0.5), transparent 20%, transparent 78%, rgba(3, 7, 18, 0.62)),
+          linear-gradient(0deg, rgba(3, 7, 18, 0.7), transparent 34%);
       }
 
       @keyframes voxelGrid {
@@ -880,8 +873,8 @@
       :root {
         color-scheme: dark;
         --bg: #101614;
-        --panel: rgba(15, 22, 18, 0.94);
-        --panel-soft: rgba(18, 31, 24, 0.94);
+        --panel: rgba(18, 27, 22, 0.72);
+        --panel-soft: rgba(22, 40, 29, 0.78);
         --ink: #fff7d6;
         --muted: #c9c2a5;
         --line: #2b1e13;
@@ -945,8 +938,6 @@
         min-height: calc(100vh - 28px);
         overflow: hidden;
         position: relative;
-        background:
-          linear-gradient(180deg, rgba(15, 22, 18, 0.98), rgba(10, 15, 12, 0.98));
         transform: rotateY(-0.35deg);
         animation: panelDrop 620ms steps(5, end) 80ms both;
       }
@@ -1110,17 +1101,14 @@
       }
 
       .chat-scroll {
-        position: relative;
-        z-index: 2;
         padding: 28px 22px;
         background:
-          linear-gradient(180deg, rgba(11, 17, 14, 0.96), rgba(12, 18, 15, 0.98));
+          linear-gradient(180deg, rgba(7, 13, 10, 0.08), rgba(7, 13, 10, 0.28)),
+          repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.025) 0 8px, transparent 8px 16px);
       }
 
       .chat-inner {
         width: min(940px, 100%);
-        position: relative;
-        z-index: 3;
       }
 
       .empty {
@@ -1337,193 +1325,125 @@
         color: #fff8dc;
       }
 
-      .companion-panel {
+      .companion-model {
         position: absolute;
-        right: 24px;
-        bottom: 124px;
+        right: 46px;
+        bottom: 136px;
         z-index: 2;
-        width: 184px;
-        display: grid;
-        justify-items: center;
-        gap: 10px;
-        pointer-events: none;
-      }
-
-      .companion-stage {
-        position: relative;
         width: 150px;
-        height: 162px;
-        filter: drop-shadow(12px 16px 0 rgba(0, 0, 0, 0.34));
-        animation: companionBob 2.25s steps(6, end) infinite;
+        height: 190px;
+        pointer-events: none;
+        transform-style: preserve-3d;
+        animation: companionBob 2.2s steps(6, end) infinite;
+        filter: drop-shadow(16px 20px 0 rgba(0, 0, 0, 0.34));
       }
 
-      .fox-fallback,
-      .fox-fallback span {
+      .companion-model .cube {
         position: absolute;
         display: block;
+        border: 3px solid #080604;
+        border-top-color: rgba(255, 240, 168, 0.85);
+        border-left-color: rgba(255, 240, 168, 0.42);
+        box-shadow: inset -8px -8px 0 rgba(0, 0, 0, 0.24), 0 6px 0 rgba(0, 0, 0, 0.4);
+        transform: skewY(-7deg);
       }
 
-      .fox-fallback {
-        inset: 0;
-        transition: filter 180ms ease, transform 180ms steps(3, end);
-      }
-
-      .fox-shadow {
+      .companion-shadow {
         left: 28px;
-        bottom: 2px;
+        bottom: 0;
         width: 92px;
-        height: 18px;
+        height: 24px;
         background: rgba(0, 0, 0, 0.38);
-        transform: skewX(-18deg);
+        border-color: rgba(0, 0, 0, 0.1) !important;
+        box-shadow: none !important;
       }
 
-      .fox-head {
+      .companion-body {
+        left: 45px;
+        bottom: 44px;
+        width: 62px;
+        height: 76px;
+        background: #b73527;
+      }
+
+      .companion-head {
+        left: 36px;
+        bottom: 116px;
+        width: 80px;
+        height: 58px;
+        background: #2de0a0;
+      }
+
+      .companion-hat {
         left: 27px;
-        top: 31px;
-        width: 96px;
-        height: 82px;
-        background: #f58a27;
-        clip-path: polygon(50% 0, 91% 18%, 100% 58%, 78% 100%, 22% 100%, 0 58%, 9% 18%);
-        border: 4px solid #1d0c05;
+        bottom: 166px;
+        width: 98px;
+        height: 18px;
+        background: #f4c542;
       }
 
-      .fox-ear-left,
-      .fox-ear-right {
-        top: 3px;
-        width: 44px;
-        height: 62px;
-        background: #f58a27;
-        clip-path: polygon(50% 0, 100% 100%, 0 78%);
-        border: 4px solid #1d0c05;
+      .companion-eye-left,
+      .companion-eye-right {
+        bottom: 140px;
+        width: 10px;
+        height: 10px;
+        background: #080a08;
+        box-shadow: 0 0 10px rgba(255, 240, 168, 0.5);
       }
 
-      .fox-ear-left {
-        left: 22px;
-        transform: rotate(-12deg);
+      .companion-eye-left {
+        left: 56px;
       }
 
-      .fox-ear-right {
-        right: 22px;
-        transform: scaleX(-1) rotate(-12deg);
+      .companion-eye-right {
+        left: 88px;
       }
 
-      .fox-muzzle {
-        left: 43px;
-        top: 77px;
-        width: 64px;
-        height: 52px;
-        background: #fff2df;
-        clip-path: polygon(50% 0, 100% 28%, 82% 100%, 50% 92%, 18% 100%, 0 28%);
-        border: 4px solid #1d0c05;
-      }
-
-      .fox-eye-left,
-      .fox-eye-right {
-        top: 65px;
-        width: 18px;
-        height: 22px;
-        background: #231008;
-        clip-path: polygon(0 0, 100% 42%, 18% 100%);
-      }
-
-      .fox-eye-left {
-        left: 45px;
-      }
-
-      .fox-eye-right {
-        right: 45px;
-        transform: scaleX(-1);
-      }
-
-      .fox-nose {
-        left: 66px;
-        top: 88px;
+      .companion-arm-left,
+      .companion-arm-right {
+        bottom: 52px;
         width: 20px;
-        height: 20px;
-        background: #1b0a05;
-        transform: rotate(45deg);
-        border-radius: 2px;
+        height: 62px;
+        background: #0e6b55;
+        animation: companionWave 1.1s steps(4, end) infinite alternate;
       }
 
-      .fox-body {
-        left: 45px;
-        top: 109px;
-        width: 60px;
-        height: 48px;
-        background: #f07421;
-        clip-path: polygon(16% 0, 84% 0, 100% 62%, 50% 100%, 0 62%);
-        border: 4px solid #1d0c05;
+      .companion-arm-left {
+        left: 20px;
       }
 
-      .fox-tail {
-        right: -3px;
-        top: 103px;
-        width: 64px;
-        height: 54px;
-        background: #f58a27;
-        clip-path: polygon(0 20%, 62% 0, 100% 84%, 72% 100%, 22% 60%);
-        border: 4px solid #1d0c05;
-        transform-origin: 14% 56%;
-        animation: foxTail 1.45s steps(5, end) infinite alternate;
+      .companion-arm-right {
+        right: 20px;
+        animation-delay: 220ms;
       }
 
-      .fox-tail::after {
-        content: "";
-        position: absolute;
-        right: -1px;
-        bottom: -2px;
-        width: 31px;
-        height: 23px;
-        background: #fff2df;
-        clip-path: polygon(0 100%, 100% 0, 100% 100%);
+      .companion-leg-left,
+      .companion-leg-right {
+        bottom: 18px;
+        width: 22px;
+        height: 38px;
+        background: #f4c542;
       }
 
-      .companion-info {
-        width: 100%;
-        border: 3px solid #100b08;
-        border-top-color: #78623d;
-        border-left-color: #78623d;
-        background: rgba(8, 12, 10, 0.86);
-        box-shadow: 0 5px 0 rgba(0, 0, 0, 0.42);
-        padding: 8px;
-        display: grid;
-        gap: 5px;
-        text-align: center;
+      .companion-leg-left {
+        left: 50px;
       }
 
-      .companion-info strong {
-        color: #ffe9a6;
-        font-size: 12px;
-        text-transform: uppercase;
+      .companion-leg-right {
+        right: 48px;
       }
 
-      .companion-info span {
-        color: #b9f6ca;
-        font-size: 11px;
-        font-weight: 850;
-      }
-
-      .companion-link {
-        pointer-events: auto;
-        min-height: 32px;
-        padding: 0 10px;
-        font-size: 11px;
-      }
-
-      body[data-agent-state="thinking"] .fox-fallback {
-        filter: brightness(1.2) drop-shadow(0 0 16px rgba(244, 197, 66, 0.4));
-      }
-
-      body[data-agent-state="thinking"] .companion-stage {
-        animation-duration: 1.05s;
-      }
-
-      body[data-agent-state="ok"] .companion-info span {
-        color: #65ff89;
-      }
-
-      body[data-agent-state="bad"] .companion-info span {
-        color: #ff8585;
+      .companion-lantern {
+        left: 0;
+        bottom: 32px;
+        width: 28px;
+        height: 34px;
+        background: #ff7a2d;
+        box-shadow:
+          inset -6px -6px 0 rgba(0, 0, 0, 0.22),
+          0 0 26px rgba(255, 122, 45, 0.78),
+          0 6px 0 rgba(0, 0, 0, 0.36) !important;
+        animation: lanternPulse 920ms steps(4, end) infinite;
       }
 
       @keyframes companionBob {
@@ -1533,17 +1453,28 @@
         }
 
         50% {
-          transform: translateY(-10px) rotateZ(1deg);
+          transform: translateY(-14px) rotateZ(1deg);
         }
       }
 
-      @keyframes foxTail {
+      @keyframes companionWave {
         from {
-          transform: rotate(-7deg);
+          transform: skewY(-7deg) translateY(0);
         }
 
         to {
-          transform: rotate(10deg);
+          transform: skewY(-7deg) translateY(-10px);
+        }
+      }
+
+      @keyframes lanternPulse {
+        0%,
+        100% {
+          filter: brightness(1);
+        }
+
+        50% {
+          filter: brightness(1.45);
         }
       }
 
@@ -1591,13 +1522,13 @@
           padding: 18px 10px;
         }
 
-        .companion-panel {
-          right: -84px;
-          bottom: 92px;
+        .companion-model {
+          right: -76px;
+          bottom: 84px;
           z-index: 1;
-          transform: scale(0.6);
+          transform: scale(0.48);
           transform-origin: right bottom;
-          opacity: 0.28;
+          opacity: 0.34;
         }
 
         .chat-scroll {
@@ -1716,27 +1647,19 @@
           </div>
         </header>
 
-        <aside class="companion-panel" aria-label="AI companion">
-          <div class="companion-stage" aria-hidden="true">
-            <div class="fox-fallback">
-              <span class="fox-shadow"></span>
-              <span class="fox-tail"></span>
-              <span class="fox-body"></span>
-              <span class="fox-ear-left"></span>
-              <span class="fox-ear-right"></span>
-              <span class="fox-head"></span>
-              <span class="fox-muzzle"></span>
-              <span class="fox-eye-left"></span>
-              <span class="fox-eye-right"></span>
-              <span class="fox-nose"></span>
-            </div>
-          </div>
-          <div class="companion-info">
-            <strong>HY-3D Fox</strong>
-            <span id="companionStatus">Hermes idle</span>
-          </div>
-          <a class="btn btn-soft companion-link" href="https://hy-3d.net/?utm_source=chatgpt.com" target="_blank" rel="noreferrer">HY-3D</a>
-        </aside>
+        <div class="companion-model" aria-hidden="true">
+          <span class="cube companion-shadow"></span>
+          <span class="cube companion-leg-left"></span>
+          <span class="cube companion-leg-right"></span>
+          <span class="cube companion-body"></span>
+          <span class="cube companion-arm-left"></span>
+          <span class="cube companion-arm-right"></span>
+          <span class="cube companion-head"></span>
+          <span class="cube companion-hat"></span>
+          <span class="cube companion-eye-left"></span>
+          <span class="cube companion-eye-right"></span>
+          <span class="cube companion-lantern"></span>
+        </div>
 
         <section id="chatScroll" class="chat-scroll" aria-live="polite">
           <div id="chatInner" class="chat-inner"></div>
@@ -1854,13 +1777,6 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.</textarea>
               </div>
               <pre id="geminiSnippet" class="codebox"></pre>
             </div>
-            <div class="box">
-              <div class="box-head">
-                <h3>HY-3D Companion</h3>
-                <button class="btn btn-soft copy-button" type="button" data-copy="hy3dSnippet">Copy</button>
-              </div>
-              <pre id="hy3dSnippet" class="codebox"></pre>
-            </div>
           </section>
         </aside>
       </div>
@@ -1898,8 +1814,6 @@ Contoh tone:
 - "Tenang, aku cuma jujur. Kalau lo butuh orang yang bohongin lo, cari aja temen lo yang biasa."
 
 Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
-      const COMPANION_CONTEXT =
-        "Companion visual aktif: cute low poly fox yang dibuat memakai Tencent-Hunyuan/Hunyuan3D-2.1 via HY-3D. Anggap fox ini sebagai companion Passeo-ai-Agent yang ikut mood chat: idle, thinking, online, atau error.";
 
       const DEFAULTS = {
         provider: "hermes",
@@ -2225,21 +2139,6 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           "  -H 'Content-Type: application/json' \\",
           "  -d '{\"contents\":[{\"parts\":[{\"text\":\"Halo Hermes\"}]}]}'"
         ].join("\n");
-
-        $("hy3dSnippet").textContent = [
-          "HY-3D source:",
-          "https://hy-3d.net/?utm_source=chatgpt.com",
-          "",
-          "Tencent/Hunyuan model:",
-          "Tencent-Hunyuan/Hunyuan3D-2.1",
-          "",
-          "Companion prompt/reference:",
-          "cute low poly fox",
-          "assets/cute-low-poly-fox-reference.png",
-          "",
-          "Generated model:",
-          "assets/cute-low-poly-fox-hy3d.glb"
-        ].join("\n");
       }
 
       function escapeHtml(value) {
@@ -2306,16 +2205,15 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       }
 
       function makeGeminiPayload(conversation) {
-        const systemText = [state.settings.systemPrompt.trim(), COMPANION_CONTEXT].filter(Boolean).join("\n\n");
         const payload = {
           contents: buildGeminiContents(conversation),
           generationConfig: {
             temperature: 0.7
           }
         };
-        if (systemText) {
+        if (state.settings.systemPrompt.trim()) {
           payload.systemInstruction = {
-            parts: [{ text: systemText }]
+            parts: [{ text: state.settings.systemPrompt.trim() }]
           };
         }
         return payload;
@@ -2521,17 +2419,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       };
 
       function updateVoxelMood() {
-        const mood = state.sending ? "thinking" : state.statuses[state.settings.provider]?.state || "idle";
-        const labels = {
-          idle: "Hermes idle",
-          checking: "Testing Hermes",
-          thinking: "Fox thinking",
-          ok: "Hermes online",
-          bad: "Needs setup"
-        };
-        document.body.dataset.agentState = mood;
-        const companionStatus = $("companionStatus");
-        if (companionStatus) companionStatus.textContent = labels[mood] || labels.idle;
+        document.body.dataset.agentState = state.sending ? "thinking" : state.statuses[state.settings.provider]?.state || "idle";
       }
 
       function initVoxelWorld() {
@@ -2632,29 +2520,20 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           const base = compact
             ? iso(4.1, -0.55, -5.4, width, height)
             : iso(7.1, -3.05, -8.1, width, height);
-          const s = base.s * (compact ? 0.72 : 1.15);
-          const tailSwing = Math.sin(time * (thinking ? 5.4 : 2.8)) * s * 0.18;
-          const fox = {
-            orange: { top: "#f58a27", left: "#b94917", right: "#dc641c" },
-            cream: { top: "#fff2df", left: "#caa783", right: "#eed5ae" },
-            dark: { top: "#2b160e", left: "#120604", right: "#1d0c05" }
-          };
-          drawBlock(base.x, base.y + bob, s * 0.54, s * 0.86, fox.orange);
-          drawBlock(base.x, base.y - s * 1.06 + bob, s * 0.82, s * 0.74, fox.orange);
-          drawBlock(base.x, base.y - s * 0.7 + bob, s * 0.48, s * 0.34, fox.cream);
-          drawBlock(base.x - s * 0.62, base.y - s * 1.52 + bob, s * 0.26, s * 0.58, fox.orange);
-          drawBlock(base.x + s * 0.62, base.y - s * 1.52 + bob, s * 0.26, s * 0.58, fox.orange);
-          drawBlock(base.x + s * 0.95, base.y + s * 0.42 + bob + tailSwing, s * 0.34, s * 1.16, fox.orange);
-          drawBlock(base.x + s * 1.2, base.y + s * 0.98 + bob + tailSwing, s * 0.24, s * 0.36, fox.cream);
-          drawBlock(base.x - s * 0.36, base.y + s * 0.78 + bob, s * 0.2, s * 0.44, fox.dark);
-          drawBlock(base.x + s * 0.34, base.y + s * 0.78 + bob, s * 0.2, s * 0.44, fox.dark);
+          const s = base.s * (compact ? 0.9 : 1.55);
+          drawBlock(base.x, base.y + bob, s * 0.58, s * 1.58, palettes.red);
+          drawBlock(base.x, base.y - s * 1.42 + bob, s * 0.56, s * 0.9, palettes.jade);
+          drawBlock(base.x, base.y - s * 2.34 + bob, s * 0.68, s * 0.22, palettes.gold);
+          drawBlock(base.x - s * 0.75, base.y + s * 0.12 + bob + Math.sin(time * 5) * 5, s * 0.2, s * 0.82, palettes.jade);
+          drawBlock(base.x + s * 0.75, base.y + s * 0.12 + bob - Math.sin(time * 5) * 5, s * 0.2, s * 0.82, palettes.jade);
+          drawBlock(base.x - s * 1.06, base.y + s * 0.9 + bob, s * 0.23, s * 0.36, palettes.gold);
           ctx.fillStyle = "#090c08";
-          ctx.fillRect(base.x - s * 0.32, base.y - s * 1.12 + bob, s * 0.14, s * 0.14);
-          ctx.fillRect(base.x + s * 0.2, base.y - s * 1.12 + bob, s * 0.14, s * 0.14);
+          ctx.fillRect(base.x - s * 0.22, base.y - s * 1.72 + bob, s * 0.12, s * 0.12);
+          ctx.fillRect(base.x + s * 0.13, base.y - s * 1.72 + bob, s * 0.12, s * 0.12);
           ctx.fillStyle = thinking ? "#fff0a3" : "#ff8a38";
           ctx.shadowColor = "#ff7a2d";
           ctx.shadowBlur = thinking ? 24 : 14;
-          ctx.fillRect(base.x - s * 0.07, base.y - s * 0.72 + bob, s * 0.18, s * 0.18);
+          ctx.fillRect(base.x - s * 1.18, base.y + s * 0.54 + bob, s * 0.22, s * 0.22);
           ctx.shadowBlur = 0;
         }
 
@@ -2710,11 +2589,10 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       async function initVoxelThreeWorld() {
         const canvas = $("voxelWebgl");
         if (!canvas || voxelRuntime.renderer) return;
-        if (navigator.webdriver && !new URLSearchParams(location.search).has("render3d")) return;
+        if (navigator.webdriver) return;
 
         try {
           const THREE = window.THREE || await import("https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js");
-          const { GLTFLoader } = await import("https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js");
           const renderer = new THREE.WebGLRenderer({
             canvas,
             alpha: false,
@@ -2762,8 +2640,6 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
             jade: makeMat(0x2de0a0, 0x063d28, 0.22),
             darkJade: makeMat(0x0e6b55),
             red: makeMat(0xb73527, 0x2c0502, 0.16),
-            fox: makeMat(0xf58a27, 0x321006, 0.18),
-            foxCream: makeMat(0xfff2df, 0x2c1908, 0.05),
             gold: makeMat(0xf4c542, 0x3b2400, 0.2),
             ink: makeMat(0x080a08),
             lantern: makeMat(0xff7a2d, 0xff4e1f, 1.35),
@@ -2804,42 +2680,22 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           scene.add(terrain);
 
           const companion = new THREE.Group();
-          companion.position.set(-3.2, 0.62, 2.25);
-          companion.rotation.y = 0.62;
+          const body = addBlock(companion, mats.red, [0, 0.8, 0], [1.1, 1.55, 0.72]);
+          const head = addBlock(companion, mats.jade, [0, 1.95, 0.02], [1.1, 0.92, 0.92]);
+          addBlock(head, mats.ink, [-0.23, 0.08, 0.48], [0.16, 0.16, 0.08]);
+          addBlock(head, mats.ink, [0.23, 0.08, 0.48], [0.16, 0.16, 0.08]);
+          addBlock(head, mats.gold, [0, -0.22, 0.5], [0.44, 0.1, 0.08]);
+          addBlock(companion, mats.gold, [0, 2.5, 0], [1.28, 0.18, 1.04]);
+          addBlock(companion, mats.red, [0, 2.72, 0], [0.72, 0.28, 0.64]);
+          const leftArm = addBlock(companion, mats.darkJade, [-0.82, 0.78, 0.02], [0.32, 1.08, 0.34]);
+          const rightArm = addBlock(companion, mats.darkJade, [0.82, 0.78, 0.02], [0.32, 1.08, 0.34]);
+          addBlock(companion, mats.gold, [-0.34, -0.18, 0.02], [0.34, 0.76, 0.36]);
+          addBlock(companion, mats.gold, [0.34, -0.18, 0.02], [0.34, 0.76, 0.36]);
+          const lantern = addBlock(companion, mats.lantern, [-1.18, 0.1, 0.16], [0.34, 0.42, 0.34]);
+          addBlock(companion, mats.glow, [-1.18, 0.1, 0.16], [0.18, 0.22, 0.18]);
+          companion.position.set(-3.2, 0.65, 2.2);
+          companion.rotation.y = 0.55;
           scene.add(companion);
-
-          let foxModel = null;
-          const loader = new GLTFLoader();
-          loader.load(
-            "assets/cute-low-poly-fox-hy3d.glb",
-            (gltf) => {
-              foxModel = gltf.scene;
-              const box = new THREE.Box3().setFromObject(foxModel);
-              const size = new THREE.Vector3();
-              const center = new THREE.Vector3();
-              box.getSize(size);
-              box.getCenter(center);
-              foxModel.position.sub(center);
-              foxModel.scale.setScalar(2.7 / Math.max(size.x, size.y, size.z, 0.001));
-              foxModel.rotation.y = Math.PI;
-              foxModel.traverse((child) => {
-                if (!child.isMesh) return;
-                child.material = mats.fox;
-                child.castShadow = true;
-                child.receiveShadow = true;
-              });
-              companion.add(foxModel);
-              addBlock(companion, mats.ink, [-0.34, 1.62, -0.72], [0.12, 0.12, 0.08]);
-              addBlock(companion, mats.ink, [0.34, 1.62, -0.72], [0.12, 0.12, 0.08]);
-              addBlock(companion, mats.foxCream, [0, 1.24, -0.78], [0.46, 0.18, 0.08]);
-              document.body.dataset.companionModel = "hy3d";
-              canvas.dataset.companion = "hy3d";
-            },
-            undefined,
-            () => {
-              canvas.dataset.companion = "fallback";
-            }
-          );
 
           const particles = [];
           for (let i = 0; i < 46; i += 1) {
@@ -2861,7 +2717,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           voxelRuntime.scene = scene;
           voxelRuntime.camera = camera;
           voxelRuntime.companion = companion;
-          voxelRuntime.parts = { emberLight, terrain };
+          voxelRuntime.parts = { body, head, leftArm, rightArm, lantern, emberLight, terrain };
           voxelRuntime.particles = particles;
 
           function resizeVoxelWorld() {
@@ -2880,11 +2736,11 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
 
             terrain.rotation.y = -0.15 + Math.sin(t * 0.18) * 0.05;
             companion.position.y = 0.64 + Math.sin(t * 2.2) * 0.12;
-            companion.rotation.y = 0.62 + Math.sin(t * 0.82) * 0.32;
-            if (foxModel) {
-              foxModel.rotation.z = Math.sin(t * (thinking ? 5.2 : 1.8)) * (thinking ? 0.055 : 0.025);
-              foxModel.rotation.x = Math.sin(t * 1.3) * 0.025;
-            }
+            companion.rotation.y = 0.55 + Math.sin(t * 0.82) * 0.32;
+            head.rotation.y = Math.sin(t * 1.5) * 0.16;
+            leftArm.rotation.x = Math.sin(t * (thinking ? 6.4 : 2.8)) * 0.42;
+            rightArm.rotation.x = Math.sin(t * (thinking ? 6.4 : 2.8) + Math.PI) * 0.42;
+            lantern.material.emissiveIntensity = 1.25 + Math.sin(t * 6.5) * 0.45 + pulse * 0.22;
             emberLight.intensity = 1.7 + pulse + Math.sin(t * 4.6) * 0.35;
             emberLight.position.x = -3.6 + Math.sin(t * 1.2) * 0.35;
 
@@ -2909,7 +2765,6 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           window.addEventListener("resize", resizeVoxelWorld);
           renderFrame(0);
         } catch (error) {
-          if (new URLSearchParams(location.search).has("render3d")) console.warn(`Voxel 3D fallback: ${error.message}`);
           canvas.dataset.fallback = "true";
         }
       }
