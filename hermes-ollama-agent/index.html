@@ -3102,6 +3102,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.</textarea>
       <div id="toast" class="toast" hidden></div>
     </div>
 
+    <script src="braint-Ai.js"></script>
     <script>
       const SETTINGS_KEY = "ai-agent-chat-settings-v1";
       const CONVERSATIONS_KEY = "ai-agent-chat-conversations-v1";
@@ -3986,8 +3987,32 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         ].join("\n");
       }
 
-      function composeSystemPrompt(systemPrompt = state.settings.systemPrompt) {
-        return [String(systemPrompt || "").trim(), capabilityPromptContext()].filter(Boolean).join("\n\n");
+      function braintController() {
+        return window.PasseoBraintAI && typeof window.PasseoBraintAI.plan === "function" ? window.PasseoBraintAI : null;
+      }
+
+      function buildBraintPlan(conversation, options = {}) {
+        const controller = braintController();
+        if (!controller) return null;
+        try {
+          return controller.plan({
+            conversation,
+            capabilities: activeCapabilities(),
+            appName: APP_NAME,
+            chainOfThoughtRequested: shouldUseReasoningHint(conversation),
+            ...options
+          });
+        } catch {
+          return null;
+        }
+      }
+
+      function composeSystemPrompt(systemPrompt = state.settings.systemPrompt, braintPlan = null) {
+        return [
+          String(systemPrompt || "").trim(),
+          capabilityPromptContext(),
+          braintPlan?.systemDirective || ""
+        ].filter(Boolean).join("\n\n");
       }
 
       function renderSkillsPanel() {
@@ -4619,7 +4644,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         return `${text.slice(0, head)}\n\n[...dipotong otomatis supaya hemat token...]\n\n${suffix}`;
       }
 
-      function buildGeminiContents(conversation) {
+      function buildGeminiContents(conversation, braintPlan = null) {
         const sourceMessages = conversation.messages
           .filter((message) => ["user", "assistant"].includes(message.role))
           .filter((message) => !message.error && !message.pending && message.content);
@@ -4652,6 +4677,16 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           }
         }
 
+        if (braintPlan?.contextNote) {
+          const latestUserIndex = contents.findLastIndex((item) => item.role === "user");
+          if (latestUserIndex >= 0) {
+            contents[latestUserIndex] = {
+              ...contents[latestUserIndex],
+              parts: [{ text: `${contents[latestUserIndex].parts[0].text}\n\n${braintPlan.contextNote}` }]
+            };
+          }
+        }
+
         return contents;
       }
 
@@ -4668,12 +4703,13 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       }
 
       function makeGeminiPayload(conversation, systemPrompt = state.settings.systemPrompt, options = {}) {
-        const finalSystemPrompt = compactText(composeSystemPrompt(systemPrompt), GEMINI_SYSTEM_PROMPT_CHAR_LIMIT);
+        const braintPlan = options.braintPlan || buildBraintPlan(conversation, options);
+        const finalSystemPrompt = compactText(composeSystemPrompt(systemPrompt, braintPlan), GEMINI_SYSTEM_PROMPT_CHAR_LIMIT);
         const payload = {
-          contents: buildGeminiContents(conversation),
+          contents: buildGeminiContents(conversation, braintPlan),
           generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: options.maxOutputTokens || 2048
+            temperature: options.temperature || braintPlan?.temperature || 0.7,
+            maxOutputTokens: options.maxOutputTokens || braintPlan?.maxOutputTokens || 2048
           }
         };
         if (String(finalSystemPrompt || "").trim()) {
