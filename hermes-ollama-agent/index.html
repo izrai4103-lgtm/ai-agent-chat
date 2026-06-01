@@ -2534,6 +2534,26 @@
         }
       }
 
+      .ops-panel {
+        display: none;
+      }
+
+      .main {
+        grid-template-rows: auto minmax(0, 1fr) auto;
+      }
+
+      .chat-scroll {
+        background: transparent;
+      }
+
+      .composer-meta {
+        display: none;
+      }
+
+      .empty-clean {
+        min-height: 100%;
+      }
+
       @media (prefers-reduced-motion: reduce) {
         *,
         *::before,
@@ -3932,34 +3952,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       }
 
       function renderEmpty() {
-        return `
-          <div class="empty">
-            <div>
-              <h2>Apa yang ingin kamu kerjakan?</h2>
-              <p>
-                Mode aktif: Passeo-ai-Agent. Engine siap menjawab chat tanpa menampilkan nama model teknis di ruang percakapan.
-              </p>
-            </div>
-            <div class="stack-strip" aria-label="Runtime stack">
-              <span>Client UI</span>
-              <span>Hermes Router</span>
-              <span>AI Engine</span>
-              <span>Vector DB</span>
-            </div>
-            <div class="prompt-grid">
-              ${prompts
-                .map(
-                  (prompt, index) => `
-                    <button class="prompt-card" type="button" data-prompt="${index}">
-                      <strong>${escapeHtml(prompt.title)}</strong>
-                      <span>${escapeHtml(prompt.text)}</span>
-                    </button>
-                  `
-                )
-                .join("")}
-            </div>
-          </div>
-        `;
+        return '<div class="empty-clean" aria-hidden="true"></div>';
       }
 
       function renderMessages() {
