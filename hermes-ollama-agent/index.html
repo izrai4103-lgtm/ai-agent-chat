@@ -2902,24 +2902,14 @@
                   <span>API key 2</span>
                   <input id="geminiKey2" class="field" type="password" autocomplete="off" placeholder="Optional Gemini API key" />
                 </label>
-                <label>
-                  <span>API key 3</span>
-                  <input id="geminiKey3" class="field" type="password" autocomplete="off" placeholder="Optional Gemini API key" />
-                </label>
-                <label>
-                  <span>API key 4</span>
-                  <input id="geminiKey4" class="field" type="password" autocomplete="off" placeholder="Optional Gemini API key" />
-                </label>
               </div>
-              <p id="keyPoolNote" class="note">0/4 API key aktif. Estimasi pool: 0jt/4jt token/hari.</p>
+              <p id="keyPoolNote" class="note">0/2 API key aktif. Estimasi pool: 0jt/2jt token/hari.</p>
               <label>
                 <span>Engine profile</span>
                 <select id="geminiModel" class="field">
                   <option value="auto">Passeo auto (recommended)</option>
-                  <option value="gemini-3.5-flash">Passeo flash max</option>
-                  <option value="gemini-3.1-flash-lite">Passeo flash lite</option>
-                  <option value="gemini-2.5-flash">Passeo stable flash</option>
                   <option value="gemini-2.5-flash-lite">Passeo stable lite</option>
+                  <option value="gemini-2.5-flash">Passeo stable flash</option>
                 </select>
               </label>
               <label>
@@ -3122,7 +3112,12 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.</textarea>
       const VECTOR_DB_VERSION = 1;
       const VECTOR_STORE = "records";
       const VECTOR_DIMENSIONS = 64;
-      const MAX_GEMINI_KEYS = 4;
+      const MAX_GEMINI_KEYS = 2;
+      const MAX_GEMINI_ATTEMPTS_PER_MESSAGE = 3;
+      const GEMINI_KEY_COOLDOWN_MS = 15 * 60 * 1000;
+      const GEMINI_CONTEXT_MESSAGE_LIMIT = 10;
+      const GEMINI_CONTEXT_CHAR_LIMIT = 12000;
+      const GEMINI_SYSTEM_PROMPT_CHAR_LIMIT = 6000;
       const EXPLANATION_REQUEST_PATTERN =
         /\b(jelaskan|jelasin|terangkan|uraikan|rincikan|analisis|analisa|bedah|kenapa|mengapa|kok|alasan|sebab|penyebab|explain|why|reason|analyze|analyse|break down|how come)\b/i;
       const GET_TIME_REQUEST_PATTERN =
@@ -3162,17 +3157,15 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         geminiEndpoint: "https://generativelanguage.googleapis.com/v1beta",
         geminiModel: "auto",
         geminiKey: "",
-        geminiKeys: ["", "", "", ""],
+        geminiKeys: ["", ""],
         geminiKeyCursor: 0,
         chainOfThoughtForced: true,
         systemPrompt: SYSTEM_PERSONA
       };
 
       const GEMINI_FALLBACK_MODELS = [
-        "gemini-3.5-flash",
-        "gemini-3.1-flash-lite",
-        "gemini-2.5-flash",
-        "gemini-2.5-flash-lite"
+        "gemini-2.5-flash-lite",
+        "gemini-2.5-flash"
       ];
 
       const APP_NAME = "Passeo-ai-Agent";
@@ -3314,6 +3307,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         lastLatency: null,
         lastModel: "",
         geminiKeyCursor: 0,
+        geminiKeyCooldowns: {},
         codeLanguage: "python",
         codePrompt: "",
         codeOutput: "",
@@ -3343,9 +3337,13 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
 
       function normalizeGeminiKeys(settings = state.settings) {
         const savedPool = Array.isArray(settings.geminiKeys) ? settings.geminiKeys : [];
-        const pool = Array.from({ length: MAX_GEMINI_KEYS }, (_, index) => String(savedPool[index] || "").trim());
         const legacyKey = String(settings.geminiKey || "").trim();
-        if (!pool[0] && legacyKey) pool[0] = legacyKey;
+        const uniqueKeys = [];
+        [...savedPool, legacyKey].forEach((value) => {
+          const key = String(value || "").trim();
+          if (key && !uniqueKeys.includes(key)) uniqueKeys.push(key);
+        });
+        const pool = Array.from({ length: MAX_GEMINI_KEYS }, (_, index) => uniqueKeys[index] || "");
         settings.geminiKeys = pool;
         settings.geminiKey = pool[0] || "";
         return pool;
@@ -3361,17 +3359,38 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           .filter((item) => item.key);
       }
 
+      function keyCooldownRemaining(index) {
+        const until = Number(state.geminiKeyCooldowns?.[index]?.until || 0);
+        return Math.max(0, until - Date.now());
+      }
+
+      function setGeminiKeyCooldown(index, reason = "limit") {
+        state.geminiKeyCooldowns[index] = {
+          until: Date.now() + GEMINI_KEY_COOLDOWN_MS,
+          reason
+        };
+      }
+
+      function clearGeminiKeyCooldown(index) {
+        delete state.geminiKeyCooldowns[index];
+      }
+
+      function availableGeminiKeys() {
+        return activeGeminiKeys().filter((item) => keyCooldownRemaining(item.index) <= 0);
+      }
+
       function geminiKeyPoolMeta() {
         const activeCount = activeGeminiKeys().length;
+        const cooldownCount = activeGeminiKeys().filter((item) => keyCooldownRemaining(item.index) > 0).length;
         return {
           activeCount,
           label: `${activeCount}/${MAX_GEMINI_KEYS} API key aktif`,
-          tokenLabel: `${activeCount}jt/${MAX_GEMINI_KEYS}jt token/hari estimasi`
+          tokenLabel: `${activeCount}jt/${MAX_GEMINI_KEYS}jt token/hari estimasi${cooldownCount ? ` · ${cooldownCount} cooldown` : ""}`
         };
       }
 
       function orderedGeminiKeys() {
-        const keys = activeGeminiKeys();
+        const keys = availableGeminiKeys();
         if (!keys.length) return [];
         const start = state.geminiKeyCursor % keys.length;
         return [...keys.slice(start), ...keys.slice(0, start)];
@@ -3407,6 +3426,10 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           let shouldSaveSettings = false;
           const migratedLegacyKey = Boolean(savedSettings.geminiKey) && !Array.isArray(savedSettings.geminiKeys);
           normalizeGeminiKeys(state.settings);
+          if (!["auto", ...GEMINI_FALLBACK_MODELS].includes(state.settings.geminiModel)) {
+            state.settings.geminiModel = "auto";
+            shouldSaveSettings = true;
+          }
           state.geminiKeyCursor = Number.isFinite(Number(state.settings.geminiKeyCursor))
             ? Number(state.settings.geminiKeyCursor) % MAX_GEMINI_KEYS
             : 0;
@@ -3852,12 +3875,16 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       function readSettingsFromForm() {
         state.settings.provider = document.querySelector(".provider-tabs button.active")?.dataset.provider || state.settings.provider;
         if (state.settingsUnlocked) {
+          const previousKeys = normalizeGeminiKeys(state.settings).join("\n");
           state.settings.geminiKeys = geminiKeyInputIds().map((id) => ($(id)?.value || "").trim());
+          normalizeGeminiKeys(state.settings);
           state.settings.geminiKey = state.settings.geminiKeys[0] || "";
           state.settings.geminiModel = $("geminiModel").value;
+          if (!["auto", ...GEMINI_FALLBACK_MODELS].includes(state.settings.geminiModel)) state.settings.geminiModel = "auto";
           state.settings.geminiEndpoint = $("geminiEndpoint").value.trim() || DEFAULTS.geminiEndpoint;
           state.settings.chainOfThoughtForced = $("chainOfThoughtForced").checked;
           state.settings.systemPrompt = $("systemPrompt").value;
+          if (previousKeys !== state.settings.geminiKeys.join("\n")) state.geminiKeyCooldowns = {};
         }
         saveSettings();
       }
@@ -4272,8 +4299,8 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         $("securityPill").innerHTML = `<span class="${statusDotClass(status)}"></span><span>${status.label}</span>`;
         $("lockSettingsButton").hidden = locked;
         $("securityNote").textContent = unlocked
-          ? "4 slot API key, uji koneksi, model, endpoint, chain_of_thought_forced, dan system prompt bisa diedit."
-          : "Klik tombol Set dan masukkan password untuk membuka 4 slot API key, uji koneksi, chain_of_thought_forced, dan system prompt.";
+          ? "2 slot API key, uji koneksi, model, endpoint, chain_of_thought_forced, dan system prompt bisa diedit."
+          : "Klik tombol Set dan masukkan password untuk membuka 2 slot API key, uji koneksi, chain_of_thought_forced, dan system prompt.";
         $("keyPoolNote").textContent = `${pool.label}. Estimasi pool: ${pool.tokenLabel}.`;
 
         [...geminiKeyInputIds(), "geminiModel", "geminiEndpoint", "chainOfThoughtForced", "systemPrompt", "testHermesButton", "saveSettingsButton"].forEach((id) => {
@@ -4431,7 +4458,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           return;
         }
         if (!activeGeminiKeys().length) {
-          showToast("API key belum diisi. Buka Set dan isi minimal 1 dari 4 slot key.");
+          showToast("API key belum diisi. Buka Set dan isi minimal 1 dari 2 slot key.");
           return;
         }
 
@@ -4446,7 +4473,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         render();
 
         try {
-          await sendGemini(tempConversation, tempMessage, { systemPrompt: CODE_SYSTEM_PROMPT });
+          await sendGemini(tempConversation, tempMessage, { systemPrompt: CODE_SYSTEM_PROMPT, maxOutputTokens: 4096 });
           state.codeOutput = tempMessage.content || "";
           state.codeLastLanguage = state.codeLanguage;
           showToast("Kode selesai dibuat.");
@@ -4583,14 +4610,37 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         return EXPLANATION_REQUEST_PATTERN.test(latestUserMessage?.content || "");
       }
 
+      function compactText(value, maxChars) {
+        const text = String(value || "").trim();
+        if (text.length <= maxChars) return text;
+        const head = Math.floor(maxChars * 0.58);
+        const tail = Math.max(0, maxChars - head - 52);
+        const suffix = tail > 0 ? text.slice(-tail) : "";
+        return `${text.slice(0, head)}\n\n[...dipotong otomatis supaya hemat token...]\n\n${suffix}`;
+      }
+
       function buildGeminiContents(conversation) {
-        const contents = conversation.messages
+        const sourceMessages = conversation.messages
           .filter((message) => ["user", "assistant"].includes(message.role))
-          .filter((message) => !message.error && !message.pending && message.content)
-          .map((message) => ({
-            role: message.role === "assistant" ? "model" : "user",
-            parts: [{ text: message.content }]
-          }));
+          .filter((message) => !message.error && !message.pending && message.content);
+        const selected = [];
+        let usedChars = 0;
+
+        for (let index = sourceMessages.length - 1; index >= 0; index -= 1) {
+          if (selected.length >= GEMINI_CONTEXT_MESSAGE_LIMIT) break;
+          const remaining = GEMINI_CONTEXT_CHAR_LIMIT - usedChars;
+          if (remaining <= 0) break;
+          const maxForMessage = Math.min(remaining, 3000);
+          const text = compactText(sourceMessages[index].content, maxForMessage);
+          if (!text) continue;
+          usedChars += text.length;
+          selected.unshift({
+            role: sourceMessages[index].role === "assistant" ? "model" : "user",
+            parts: [{ text }]
+          });
+        }
+
+        const contents = selected;
 
         if (shouldUseReasoningHint(conversation)) {
           const latestUserIndex = contents.findLastIndex((item) => item.role === "user");
@@ -4617,12 +4667,13 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         return url.toString();
       }
 
-      function makeGeminiPayload(conversation, systemPrompt = state.settings.systemPrompt) {
-        const finalSystemPrompt = composeSystemPrompt(systemPrompt);
+      function makeGeminiPayload(conversation, systemPrompt = state.settings.systemPrompt, options = {}) {
+        const finalSystemPrompt = compactText(composeSystemPrompt(systemPrompt), GEMINI_SYSTEM_PROMPT_CHAR_LIMIT);
         const payload = {
           contents: buildGeminiContents(conversation),
           generationConfig: {
-            temperature: 0.7
+            temperature: 0.7,
+            maxOutputTokens: options.maxOutputTokens || 2048
           }
         };
         if (String(finalSystemPrompt || "").trim()) {
@@ -4634,19 +4685,27 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       }
 
       async function sendGemini(conversation, assistantMessage, options = {}) {
+        const activeKeyCount = activeGeminiKeys().length;
         const keyPool = orderedGeminiKeys();
+        if (!activeKeyCount) {
+          throw new Error("Gemini API key belum diisi. Buka Pengaturan > Hermes -> Gemini, isi minimal 1 dari 2 slot API key, lalu klik Uji Hermes.");
+        }
         if (!keyPool.length) {
-          throw new Error("Gemini API key belum diisi. Buka Pengaturan > Hermes -> Gemini, isi minimal 1 dari 4 slot API key, lalu klik Uji Hermes.");
+          throw new Error("Semua API key aktif sedang cooldown karena baru kena limit. Tunggu sekitar 15 menit atau ganti API key di Set.");
         }
 
         const startedAt = performance.now();
-        const payload = makeGeminiPayload(conversation, options.systemPrompt ?? state.settings.systemPrompt);
+        const payload = makeGeminiPayload(conversation, options.systemPrompt ?? state.settings.systemPrompt, options);
         const attempted = [];
         let lastError = null;
         let stopAllAttempts = false;
 
         for (const keyItem of keyPool) {
           for (const model of geminiModelsToTry()) {
+            if (attempted.length >= MAX_GEMINI_ATTEMPTS_PER_MESSAGE) {
+              stopAllAttempts = true;
+              break;
+            }
             attempted.push({ keySlot: keyItem.index + 1, model });
             assistantMessage.label = APP_NAME;
             assistantMessage.content = attempted.length > 1
@@ -4669,6 +4728,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
               assistantMessage.keySlot = keyItem.index + 1;
               state.lastLatency = Math.round(performance.now() - startedAt);
               state.lastModel = APP_NAME;
+              clearGeminiKeyCooldown(keyItem.index);
               markGeminiKeyUsed(keyItem.index);
               setStatus("hermes", "ok", `Online: ${APP_NAME} · key ${keyItem.index + 1}/${MAX_GEMINI_KEYS}`);
               return;
@@ -4676,6 +4736,10 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
 
             const apiError = await readApiError(response, "Hermes");
             lastError = apiError;
+            if (response.status === 429) {
+              setGeminiKeyCooldown(keyItem.index, "limit");
+              markGeminiKeyUsed(keyItem.index);
+            }
             if ([400, 401, 403, 429].includes(response.status)) break;
             if (response.status === 503) {
               await sleep(450);
@@ -4691,8 +4755,8 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
 
         const message = lastError?.message || `${APP_NAME} request gagal.`;
         throw new Error(
-          `${message}\n\nSemua ${keyPool.length} API key aktif sudah dicoba otomatis bersama fallback engine.\n\n` +
-            "Jika ini 429/limit, tambah key lain atau tunggu reset kuota harian. Jika 503/UNAVAILABLE, engine sedang overload sementara."
+          `${message}\n\nSudah dicoba otomatis memakai ${attempted.length} attempt hemat token dari ${keyPool.length} API key yang tersedia.\n\n` +
+            "Jika ini 429/limit, key itu akan cooldown sebentar supaya tidak ditembak terus. Jika 503/UNAVAILABLE, engine sedang overload sementara."
         );
       }
 
@@ -4859,7 +4923,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         readSettingsFromForm();
         if (!activeGeminiKeys().length) {
           openSettingsDrawer("connection");
-          showToast("Isi minimal 1 dari 4 slot API key dulu.");
+          showToast("Isi minimal 1 dari 2 slot API key dulu.");
           return;
         }
         setStatus("hermes", "checking", "Menguji");
