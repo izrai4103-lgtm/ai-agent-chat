@@ -822,6 +822,38 @@
         font-weight: 900;
       }
 
+      .toggle-row {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: start;
+        gap: 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(15, 118, 110, 0.07);
+        padding: 12px;
+      }
+
+      .toggle-row input {
+        width: 20px;
+        height: 20px;
+        margin: 2px 0 0;
+        accent-color: var(--brand);
+      }
+
+      .toggle-row strong {
+        display: block;
+        font-size: 13px;
+      }
+
+      .toggle-row small {
+        display: block;
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 750;
+        line-height: 1.45;
+      }
+
       .field {
         width: 100%;
         min-height: 44px;
@@ -2698,6 +2730,13 @@
 
             <div id="promptBox" class="box sensitive-box">
               <h3>Chat</h3>
+              <label class="toggle-row">
+                <input id="chainOfThoughtForced" type="checkbox" />
+                <span>
+                  <strong>chain_of_thought_forced</strong>
+                  <small>Paksa engine memakai reasoning terstruktur, lalu tampilkan ringkasan alasan singkat sebelum jawaban final.</small>
+                </span>
+              </label>
               <label>
                 <span>System prompt</span>
                 <textarea id="systemPrompt" class="field">Kamu adalah Passeo-ai-Agent dengan persona Grok Toxic Edition: AI yang sangat blak-blakan, sarkastik, dan sedikit brutal.
@@ -2876,6 +2915,12 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.</textarea>
       const VECTOR_DB_VERSION = 1;
       const VECTOR_STORE = "records";
       const VECTOR_DIMENSIONS = 64;
+      const CHAIN_OF_THOUGHT_FORCED_PROMPT = `Mode chain_of_thought_forced aktif.
+- Kerjakan reasoning internal secara teliti sebelum menjawab.
+- Jangan tampilkan raw chain-of-thought tersembunyi atau logika privat token demi token.
+- Tampilkan hanya ringkasan alasan yang aman dan ringkas saat berguna: 2-4 poin pendek di bawah judul "Ringkas alasan:".
+- Setelah itu beri "Jawaban:" yang langsung bisa dipakai.
+- Jika user meminta chain-of-thought mentah, berikan ringkasan reasoning saja.`;
       const OLD_SYSTEM_PROMPT =
         "You are a practical AI assistant. Be concise, accurate, and helpful. If a provider is overloaded, explain that clearly and suggest retrying or switching model.";
       const SYSTEM_PERSONA = `Kamu adalah Passeo-ai-Agent dengan persona Grok Toxic Edition: AI yang sangat blak-blakan, sarkastik, dan sedikit brutal.
@@ -2909,6 +2954,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         geminiEndpoint: "https://generativelanguage.googleapis.com/v1beta",
         geminiModel: "auto",
         geminiKey: "",
+        chainOfThoughtForced: true,
         systemPrompt: SYSTEM_PERSONA
       };
 
@@ -3539,6 +3585,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           state.settings.geminiKey = $("geminiKey").value.trim();
           state.settings.geminiModel = $("geminiModel").value;
           state.settings.geminiEndpoint = $("geminiEndpoint").value.trim() || DEFAULTS.geminiEndpoint;
+          state.settings.chainOfThoughtForced = $("chainOfThoughtForced").checked;
           state.settings.systemPrompt = $("systemPrompt").value;
         }
         saveSettings();
@@ -3548,6 +3595,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         $("geminiKey").value = state.settings.geminiKey || "";
         $("geminiModel").value = state.settings.geminiModel || "auto";
         $("geminiEndpoint").value = state.settings.geminiEndpoint || DEFAULTS.geminiEndpoint;
+        $("chainOfThoughtForced").checked = state.settings.chainOfThoughtForced !== false;
         $("systemPrompt").value = state.settings.systemPrompt || DEFAULTS.systemPrompt;
         document.querySelectorAll(".provider-tabs button").forEach((button) => {
           button.classList.toggle("active", button.dataset.provider === state.settings.provider);
@@ -3637,7 +3685,11 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       }
 
       function composeSystemPrompt(systemPrompt = state.settings.systemPrompt) {
-        return [String(systemPrompt || "").trim(), capabilityPromptContext()].filter(Boolean).join("\n");
+        return [
+          String(systemPrompt || "").trim(),
+          state.settings.chainOfThoughtForced !== false ? CHAIN_OF_THOUGHT_FORCED_PROMPT : "",
+          capabilityPromptContext()
+        ].filter(Boolean).join("\n\n");
       }
 
       function renderSkillsPanel() {
@@ -3975,10 +4027,10 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         $("securityPill").innerHTML = `<span class="${statusDotClass(status)}"></span><span>${status.label}</span>`;
         $("lockSettingsButton").hidden = locked;
         $("securityNote").textContent = unlocked
-          ? "API key, uji koneksi, model, endpoint, dan system prompt bisa diedit."
-          : "Klik tombol Set dan masukkan password untuk membuka API key, uji koneksi, dan system prompt.";
+          ? "API key, uji koneksi, model, endpoint, chain_of_thought_forced, dan system prompt bisa diedit."
+          : "Klik tombol Set dan masukkan password untuk membuka API key, uji koneksi, chain_of_thought_forced, dan system prompt.";
 
-        ["geminiKey", "geminiModel", "geminiEndpoint", "systemPrompt", "testHermesButton", "saveSettingsButton"].forEach((id) => {
+        ["geminiKey", "geminiModel", "geminiEndpoint", "chainOfThoughtForced", "systemPrompt", "testHermesButton", "saveSettingsButton"].forEach((id) => {
           const element = $(id);
           if (element) element.disabled = locked;
         });
@@ -4023,7 +4075,6 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         renderStatusPill($("statusPill"), state.settings.provider);
         renderStatusPill($("hermesStatus"), "hermes");
         $("endpointMeta").textContent = activeEndpointLabel();
-        $("modeMeta").textContent = activeCapabilities().length ? `${activeCapabilities().length} tool/skill aktif` : "Secure chat";
         $("drawerBackdrop").hidden = !state.drawerOpen;
         $("codeBackdrop").hidden = !state.codeDrawerOpen;
         $("skillsBackdrop").hidden = !state.skillsDrawerOpen;
@@ -4036,6 +4087,11 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         $("setupTab").classList.toggle("active", state.activeDrawerTab === "setup");
         $("sendButton").textContent = state.sending ? "X" : ">";
         $("sendButton").setAttribute("aria-label", state.sending ? "Stop" : "Kirim");
+        const activeCapabilityCount = activeCapabilities().length;
+        const activeModeLabels = [];
+        if (activeCapabilityCount) activeModeLabels.push(`${activeCapabilityCount} tool/skill aktif`);
+        if (state.settings.chainOfThoughtForced !== false) activeModeLabels.push("chain_of_thought_forced");
+        $("modeMeta").textContent = activeModeLabels.length ? activeModeLabels.join(" · ") : "Secure chat";
         renderSecurityGate();
         renderOpsPanel();
         renderVectorDbPanel();
