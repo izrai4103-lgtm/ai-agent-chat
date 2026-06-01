@@ -6,7 +6,7 @@
     <title>Passeo-ai-Agent</title>
     <meta
       name="description"
-      content="GitHub Pages-ready Hermes-7B AI chat agent."
+      content="GitHub Pages-ready Hermes local 7B AI chat agent."
     />
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
     <style>
@@ -2791,7 +2791,7 @@
           <div style="display:flex;gap:8px">
             <button id="downloadButton" class="btn btn-soft btn-icon" type="button" title="Ekspor chat" aria-label="Ekspor chat">DL</button>
             <button id="deleteButton" class="btn btn-soft btn-icon" type="button" title="Hapus chat" aria-label="Hapus chat">×</button>
-            <a class="btn btn-soft btn-icon" href="https://huggingface.co/teknium/OpenHermes-2.5-Mistral-7B" target="_blank" rel="noreferrer" title="Hermes-7B model" aria-label="Hermes-7B model">?</a>
+            <a class="btn btn-soft btn-icon" href="https://ollama.com/library/nous-hermes/tags" target="_blank" rel="noreferrer" title="Hermes local 7B model" aria-label="Hermes local 7B model">?</a>
           </div>
         </footer>
       </aside>
@@ -2884,33 +2884,30 @@
                 <button id="lockSettingsButton" class="btn btn-soft" type="button" hidden>Lock</button>
               </div>
               <p id="securityNote" class="note">
-                Klik tombol Set dan masukkan password untuk membuka endpoint Hermes-7B, uji koneksi, dan system prompt.
+                Klik tombol Set dan masukkan password untuk membuka endpoint Hermes local 7B, uji koneksi, dan system prompt.
               </p>
             </div>
 
             <div id="providerBox" class="box sensitive-box">
               <div class="box-head">
-                <h3>Hermes-7B Engine</h3>
+                <h3>Hermes Local 7B Engine</h3>
                 <span id="hermesStatus" class="pill"><span class="dot"></span><span>Belum diuji</span></span>
               </div>
               <label>
-                <span>Hermes-7B model</span>
+                <span>Model local 7B ±4GB</span>
                 <select id="hermesModel" class="field">
-                  <option value="openhermes:7b">OpenHermes local 7B</option>
-                  <option value="nous-hermes2:7b">Nous Hermes local 7B</option>
-                  <option value="hermes-7b">Hermes-7B local</option>
-                  <option value="OpenHermes-2.5-Mistral-7B">OpenHermes 2.5 Mistral 7B</option>
+                  <option value="nous-hermes:7b">nous-hermes:7b · local 7B · 3.8GB</option>
                 </select>
               </label>
               <label>
-                <span>Local endpoint</span>
+                <span>Ollama local endpoint</span>
                 <input id="hermesEndpoint" class="field" value="http://localhost:11434" />
               </label>
               <p class="note">
-                Hermes sekarang memakai model 7B local tanpa credential. Endpoint local bisa Ollama /api/chat atau OpenAI-compatible /v1/chat/completions.
+                Model dikunci ke Hermes local 7B sekitar 4GB. Jalankan Ollama di perangkat yang sama, lalu endpoint ini akan memakai /api/chat.
               </p>
               <div style="display:grid;grid-template-columns:1fr auto;gap:8px">
-                <button id="testHermesButton" class="btn btn-primary" type="button">Uji Hermes</button>
+                <button id="testHermesButton" class="btn btn-primary" type="button">Uji local 7B</button>
                 <button id="saveSettingsButton" class="btn btn-soft" type="button" title="Simpan" aria-label="Simpan">OK</button>
               </div>
             </div>
@@ -2965,7 +2962,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.</textarea>
             </div>
             <div class="box">
               <div class="box-head">
-                <h3>Hermes-7B curl</h3>
+                <h3>Hermes local 7B curl</h3>
                 <button class="btn btn-soft copy-button" type="button" data-copy="hermesSnippet">Copy</button>
               </div>
               <pre id="hermesSnippet" class="codebox"></pre>
@@ -3144,16 +3141,13 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       const DEFAULTS = {
         provider: "hermes",
         hermesEndpoint: "http://localhost:11434",
-        hermesModel: "openhermes:7b",
+        hermesModel: "nous-hermes:7b",
         chainOfThoughtForced: true,
         systemPrompt: SYSTEM_PERSONA
       };
 
       const HERMES_7B_MODELS = [
-        "openhermes:7b",
-        "nous-hermes2:7b",
-        "hermes-7b",
-        "OpenHermes-2.5-Mistral-7B"
+        "nous-hermes:7b"
       ];
 
       const APP_NAME = "Passeo-ai-Agent";
@@ -3336,10 +3330,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       }
 
       function hermesModelLabel(model = state.settings.hermesModel) {
-        if (model === "openhermes:7b") return "OpenHermes local 7B";
-        if (model === "nous-hermes2:7b") return "Nous Hermes local 7B";
-        if (model === "OpenHermes-2.5-Mistral-7B") return "OpenHermes 7B";
-        return "Hermes-7B";
+        return "Hermes local 7B (3.8GB)";
       }
 
       function activeConversation() {
@@ -3840,11 +3831,15 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       }
 
       function activeEndpointLabel() {
-        return "Hermes-7B";
+        return "Hermes local 7B";
       }
 
       function sanitizeVisibleModelText(value) {
-        return String(value || "").replace(/teknium\/OpenHermes-2\.5-Mistral-7B|NousResearch\/Nous-Hermes-2-Mistral-7B-DPO/gi, "Hermes-7B");
+        const legacyOpenModel = ["Open", "Hermes"].join("");
+        return String(value || "")
+          .replace(new RegExp(`teknium/${legacyOpenModel}-2\\.5-Mistral-7B`, "gi"), "Hermes local 7B")
+          .replace(/NousResearch\/Nous-Hermes-2-Mistral-7B-DPO/gi, "Hermes local 7B")
+          .replace(new RegExp(`${legacyOpenModel}[^\\n,.;)]*`, "gi"), "Hermes local 7B");
       }
 
       function statusDotClass(status) {
@@ -4243,8 +4238,8 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         $("securityPill").innerHTML = `<span class="${statusDotClass(status)}"></span><span>${status.label}</span>`;
         $("lockSettingsButton").hidden = locked;
         $("securityNote").textContent = unlocked
-          ? "Endpoint Hermes-7B, uji koneksi, model, chain_of_thought_forced, dan system prompt bisa diedit."
-          : "Klik tombol Set dan masukkan password untuk membuka endpoint Hermes-7B, uji koneksi, chain_of_thought_forced, dan system prompt.";
+          ? "Endpoint Hermes local 7B, uji koneksi, model, chain_of_thought_forced, dan system prompt bisa diedit."
+          : "Klik tombol Set dan masukkan password untuk membuka endpoint Hermes local 7B, uji koneksi, chain_of_thought_forced, dan system prompt.";
 
         ["hermesModel", "hermesEndpoint", "chainOfThoughtForced", "systemPrompt", "testHermesButton", "saveSettingsButton"].forEach((id) => {
           const element = $(id);
@@ -4330,16 +4325,12 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         ].join("\n");
 
         $("hermesSnippet").textContent = [
-          "# Ollama local Hermes-7B:",
-          "ollama pull openhermes:7b",
+          "# Ollama local Hermes 7B sekitar 4GB:",
+          "ollama pull nous-hermes:7b",
+          "OLLAMA_ORIGINS=\"https://izrai4103-lgtm.github.io,http://localhost:*\" ollama serve",
           `curl "${joinUrl(state.settings.hermesEndpoint, "/api/chat")}" \\`,
           "  -H 'Content-Type: application/json' \\",
-          `  -d '{"model":"${state.settings.hermesModel}","stream":false,"messages":[{"role":"user","content":"Halo Hermes"}]}'`,
-          "",
-          "# OpenAI-compatible local server:",
-          `curl "${joinUrl(state.settings.hermesEndpoint, "/v1/chat/completions")}" \\`,
-          "  -H 'Content-Type: application/json' \\",
-          `  -d '{"model":"${state.settings.hermesModel}","messages":[{"role":"user","content":"Halo Hermes"}]}'`
+          `  -d '{"model":"${state.settings.hermesModel}","stream":false,"messages":[{"role":"user","content":"Halo Hermes"}]}'`
         ].join("\n");
       }
 
@@ -4620,6 +4611,16 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         return hermesEndpointMode(base) === "openai" ? joinUrl(base, "/chat/completions") : joinUrl(base, "/api/chat");
       }
 
+      function hermesLocalConnectionMessage(error = null) {
+        const detail = error?.message ? ` Detail: ${error.message}` : "";
+        return [
+          "Hermes local 7B belum tersambung.",
+          "Pastikan model 4GB sudah ada: ollama pull nous-hermes:7b.",
+          `Pastikan server hidup di ${state.settings.hermesEndpoint || DEFAULTS.hermesEndpoint}: ollama serve.`,
+          detail
+        ].join(" ");
+      }
+
       function makeHermesPayload(conversation, systemPrompt = state.settings.systemPrompt, options = {}) {
         const braintPlan = options.braintPlan || buildBraintPlan(conversation, options);
         const finalSystemPrompt = compactText(composeSystemPrompt(systemPrompt, braintPlan), HERMES_SYSTEM_PROMPT_CHAR_LIMIT);
@@ -4658,12 +4659,18 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         render();
         scrollChat();
 
-        const response = await fetch(hermesRequestUrl(), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-          signal: state.abortController?.signal
-        });
+        let response;
+        try {
+          response = await fetch(hermesRequestUrl(), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+            signal: state.abortController?.signal
+          });
+        } catch (error) {
+          if (error.name === "AbortError") throw error;
+          throw new Error(hermesLocalConnectionMessage(error));
+        }
 
         if (response.ok) {
           const json = await response.json();
@@ -4675,7 +4682,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           return;
         }
 
-        const apiError = await readApiError(response, "Hermes-7B");
+        const apiError = await readApiError(response, "Hermes local 7B");
         throw new Error(apiError?.message || `${APP_NAME} request gagal.`);
       }
 
@@ -4825,7 +4832,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         } catch (error) {
           assistantMessage.error = true;
           assistantMessage.content = error.name === "AbortError" ? "Generasi dihentikan." : error.message;
-          setStatus(state.settings.provider, "bad", "Gagal");
+          setStatus(state.settings.provider, "bad", error.name === "AbortError" ? "Stop" : "Local off");
         } finally {
           assistantMessage.pending = false;
           conversation.updatedAt = Date.now();
@@ -4853,10 +4860,10 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         try {
           await sendHermes7B(tempConversation, tempMessage);
           setStatus("hermes", "ok", tempMessage.model ? `Online: ${APP_NAME}` : "Online");
-          showToast("Hermes-7B local tersambung.");
+          showToast("Hermes local 7B tersambung.");
         } catch (error) {
-          setStatus("hermes", "bad", "Gagal");
-          showToast(error.message.slice(0, 140));
+          setStatus("hermes", "bad", "Local off");
+          showToast(error.message.slice(0, 180));
         } finally {
           state.abortController = null;
           render();
