@@ -344,6 +344,20 @@
         gap: 10px;
       }
 
+      .vector-meta {
+        display: grid;
+        gap: 4px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .vector-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
       .sidebar-stats {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2536,6 +2550,20 @@
             </div>
             <button id="settingsButton" class="btn btn-soft" type="button">Set</button>
           </div>
+          <div class="connection-card">
+            <div class="box-head">
+              <strong style="font-size:12px;color:var(--muted);text-transform:uppercase">Vector DB</strong>
+              <span id="vectorDbPill" class="pill"><span class="dot"></span><span>Idle</span></span>
+            </div>
+            <div class="vector-meta">
+              <span id="vectorDbRecordMeta">0 record</span>
+              <span id="vectorDbCacheMeta">Cache 0 B</span>
+            </div>
+            <div class="vector-actions">
+              <button id="syncVectorDbButton" class="btn btn-soft" type="button">Sync DB</button>
+              <button id="clearVectorDbButton" class="btn btn-soft" type="button">Clear DB</button>
+            </div>
+          </div>
           <div style="display:flex;gap:8px">
             <button id="downloadButton" class="btn btn-soft btn-icon" type="button" title="Ekspor chat" aria-label="Ekspor chat">DL</button>
             <button id="deleteButton" class="btn btn-soft btn-icon" type="button" title="Hapus chat" aria-label="Hapus chat">×</button>
@@ -2844,6 +2872,10 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.</textarea>
       const SKILLS_KEY = "ai-agent-chat-skills-v1";
       const SETTINGS_UNLOCK_KEY = "ai-agent-chat-settings-unlocked-v1";
       const SETTINGS_PASSWORD_HASH = "e722d5c34797e99be84517dc97a601489b2ab9c16775cfcd055a6a2411349fcd";
+      const VECTOR_DB_NAME = "passeo-ai-agent-vector-db";
+      const VECTOR_DB_VERSION = 1;
+      const VECTOR_STORE = "records";
+      const VECTOR_DIMENSIONS = 64;
       const OLD_SYSTEM_PROMPT =
         "You are a practical AI assistant. Be concise, accurate, and helpful. If a provider is overloaded, explain that clearly and suggest retrying or switching model.";
       const SYSTEM_PERSONA = `Kamu adalah Passeo-ai-Agent dengan persona Grok Toxic Edition: AI yang sangat blak-blakan, sarkastik, dan sedikit brutal.
@@ -3009,6 +3041,12 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         skillRepoUrl: "",
         skillInstalling: false,
         skillInstallStatus: { state: "idle", label: "Idle" },
+        vectorDbStatus: { state: "idle", label: "Idle" },
+        vectorDbRecords: 0,
+        vectorDbBytes: 0,
+        vectorDbLastSync: null,
+        vectorDbSyncing: false,
+        vectorDbNeedsSync: false,
         lastLatency: null,
         lastModel: "",
         codeLanguage: "python",
@@ -3023,6 +3061,8 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       const $ = (id) => document.getElementById(id);
       const makeId = () =>
         window.crypto?.randomUUID ? window.crypto.randomUUID() : `id-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      let vectorDbPromise = null;
+      let vectorSyncTimer = null;
 
       function nowTime() {
         return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -3117,6 +3157,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
             activeConversationId: state.activeConversationId
           })
         );
+        scheduleVectorSync();
       }
 
       function saveSkills() {
@@ -3127,6 +3168,260 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
             enabledCapabilityIds: state.enabledCapabilityIds
           })
         );
+      }
+
+      function formatBytes(value) {
+        const bytes = Number(value || 0);
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(bytes < 10 * 1024 ? 1 : 0)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+      }
+
+      function setVectorDbStatus(stateName, label) {
+        state.vectorDbStatus = { state: stateName, label };
+      }
+
+      function hashToken(token) {
+        let hash = 2166136261;
+        for (let index = 0; index < token.length; index += 1) {
+          hash ^= token.charCodeAt(index);
+          hash = Math.imul(hash, 16777619);
+        }
+        return hash | 0;
+      }
+
+      function vectorizeText(text) {
+        const vector = Array(VECTOR_DIMENSIONS).fill(0);
+        const tokens = String(text || "")
+          .toLowerCase()
+          .normalize("NFKD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9_ -]+/g, " ")
+          .split(/\s+/)
+          .filter(Boolean);
+
+        tokens.forEach((token) => {
+          const hash = hashToken(token);
+          const index = Math.abs(hash) % VECTOR_DIMENSIONS;
+          vector[index] += hash < 0 ? -1 : 1;
+        });
+
+        const norm = Math.sqrt(vector.reduce((sum, value) => sum + value * value, 0)) || 1;
+        return vector.map((value) => Number((value / norm).toFixed(5)));
+      }
+
+      function vectorRecordFromConversation(conversation) {
+        const title = String(conversation.title || "Chat baru").trim();
+        const latest = [...(conversation.messages || [])].reverse().find((message) => message.content);
+        const content = [title, latest?.content || "", `${conversation.messages?.length || 0} pesan`].filter(Boolean).join("\n");
+        return {
+          id: `${conversation.id}:conversation`,
+          type: "conversation",
+          conversationId: conversation.id,
+          messageId: "",
+          role: "conversation",
+          title,
+          content,
+          preview: content.replace(/\s+/g, " ").slice(0, 180),
+          vector: vectorizeText(content),
+          vectorModel: "local-hash-v1",
+          dimensions: VECTOR_DIMENSIONS,
+          createdAt: conversation.createdAt || conversation.updatedAt || Date.now(),
+          updatedAt: conversation.updatedAt || Date.now(),
+          time: ""
+        };
+      }
+
+      function vectorRecordFromMessage(conversation, message, index) {
+        const content = String(message.content || "").trim();
+        if (!content) return null;
+        const title = String(conversation.title || "Chat baru").trim();
+        const text = [title, message.role || "message", content].join("\n");
+        return {
+          id: `${conversation.id}:${message.id || index}`,
+          type: "message",
+          conversationId: conversation.id,
+          messageId: message.id || String(index),
+          role: message.role || "message",
+          title,
+          content,
+          preview: content.replace(/\s+/g, " ").slice(0, 180),
+          vector: vectorizeText(text),
+          vectorModel: "local-hash-v1",
+          dimensions: VECTOR_DIMENSIONS,
+          createdAt: conversation.createdAt || conversation.updatedAt || Date.now(),
+          updatedAt: conversation.updatedAt || Date.now(),
+          time: message.time || ""
+        };
+      }
+
+      function buildVectorRecords() {
+        return state.conversations.flatMap((conversation) => [
+          vectorRecordFromConversation(conversation),
+          ...conversation.messages.map((message, index) => vectorRecordFromMessage(conversation, message, index)).filter(Boolean)
+        ]);
+      }
+
+      function idbRequest(request) {
+        return new Promise((resolve, reject) => {
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error || new Error("IndexedDB request gagal."));
+        });
+      }
+
+      function transactionDone(transaction) {
+        return new Promise((resolve, reject) => {
+          transaction.oncomplete = () => resolve();
+          transaction.onerror = () => reject(transaction.error || new Error("Transaksi Vector DB gagal."));
+          transaction.onabort = () => reject(transaction.error || new Error("Transaksi Vector DB dibatalkan."));
+        });
+      }
+
+      function openVectorDb() {
+        if (!window.indexedDB) {
+          return Promise.reject(new Error("IndexedDB tidak tersedia di browser ini."));
+        }
+        if (vectorDbPromise) return vectorDbPromise;
+        vectorDbPromise = new Promise((resolve, reject) => {
+          const request = indexedDB.open(VECTOR_DB_NAME, VECTOR_DB_VERSION);
+          request.onupgradeneeded = () => {
+            const db = request.result;
+            const store = db.objectStoreNames.contains(VECTOR_STORE)
+              ? request.transaction.objectStore(VECTOR_STORE)
+              : db.createObjectStore(VECTOR_STORE, { keyPath: "id" });
+            if (!store.indexNames.contains("conversationId")) store.createIndex("conversationId", "conversationId", { unique: false });
+            if (!store.indexNames.contains("updatedAt")) store.createIndex("updatedAt", "updatedAt", { unique: false });
+            if (!store.indexNames.contains("role")) store.createIndex("role", "role", { unique: false });
+            if (!store.indexNames.contains("type")) store.createIndex("type", "type", { unique: false });
+          };
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => {
+            vectorDbPromise = null;
+            reject(request.error || new Error("Gagal membuka Vector DB."));
+          };
+          request.onblocked = () => {
+            vectorDbPromise = null;
+            reject(new Error("Vector DB sedang dibuka tab lain. Tutup tab lama lalu coba lagi."));
+          };
+        });
+        return vectorDbPromise;
+      }
+
+      async function replaceVectorRecords(records) {
+        const db = await openVectorDb();
+        const transaction = db.transaction(VECTOR_STORE, "readwrite");
+        const store = transaction.objectStore(VECTOR_STORE);
+        store.clear();
+        records.forEach((record) => store.put(record));
+        await transactionDone(transaction);
+      }
+
+      async function readAllVectorRecords() {
+        const db = await openVectorDb();
+        const transaction = db.transaction(VECTOR_STORE, "readonly");
+        const records = await idbRequest(transaction.objectStore(VECTOR_STORE).getAll());
+        await transactionDone(transaction);
+        return records;
+      }
+
+      async function clearVectorDbStore() {
+        const db = await openVectorDb();
+        const transaction = db.transaction(VECTOR_STORE, "readwrite");
+        transaction.objectStore(VECTOR_STORE).clear();
+        await transactionDone(transaction);
+      }
+
+      async function refreshVectorDbStats() {
+        const records = await readAllVectorRecords();
+        state.vectorDbRecords = records.length;
+        state.vectorDbBytes = new Blob([JSON.stringify(records)]).size;
+        state.vectorDbLastSync = Date.now();
+        return records;
+      }
+
+      function scheduleVectorSync() {
+        if (!("indexedDB" in window)) return;
+        clearTimeout(vectorSyncTimer);
+        vectorSyncTimer = setTimeout(() => {
+          syncVectorDbFromConversations({ silent: true });
+        }, 300);
+      }
+
+      async function syncVectorDbFromConversations(options = {}) {
+        if (!("indexedDB" in window)) {
+          setVectorDbStatus("bad", "No DB");
+          renderVectorDbPanel();
+          return;
+        }
+        if (state.vectorDbSyncing) {
+          state.vectorDbNeedsSync = true;
+          return;
+        }
+        state.vectorDbSyncing = true;
+        setVectorDbStatus("checking", "Syncing");
+        renderVectorDbPanel();
+        try {
+          const records = buildVectorRecords();
+          await replaceVectorRecords(records);
+          await refreshVectorDbStats();
+          setVectorDbStatus("ok", "Ready");
+          if (!options.silent) showToast(`${records.length} record masuk Vector DB.`);
+        } catch (error) {
+          setVectorDbStatus("bad", "Error");
+          if (!options.silent) showToast(error.message);
+        } finally {
+          state.vectorDbSyncing = false;
+          renderVectorDbPanel();
+          if (state.vectorDbNeedsSync) {
+            state.vectorDbNeedsSync = false;
+            scheduleVectorSync();
+          }
+        }
+      }
+
+      async function clearVectorDbCache() {
+        if (state.vectorDbSyncing) {
+          showToast("Vector DB sedang sync.");
+          return;
+        }
+        if (!window.confirm("Bersihkan cache Vector DB? Chat di riwayat tetap aman.")) return;
+        clearTimeout(vectorSyncTimer);
+        vectorSyncTimer = null;
+        state.vectorDbNeedsSync = false;
+        state.vectorDbSyncing = true;
+        setVectorDbStatus("checking", "Clearing");
+        renderVectorDbPanel();
+        try {
+          await clearVectorDbStore();
+          state.vectorDbRecords = 0;
+          state.vectorDbBytes = 0;
+          state.vectorDbLastSync = null;
+          setVectorDbStatus("idle", "Cleared");
+          showToast("Cache Vector DB dibersihkan.");
+        } catch (error) {
+          setVectorDbStatus("bad", "Error");
+          showToast(error.message);
+        } finally {
+          state.vectorDbSyncing = false;
+          renderVectorDbPanel();
+        }
+      }
+
+      async function initVectorDb() {
+        if (!("indexedDB" in window)) {
+          setVectorDbStatus("bad", "No DB");
+          renderVectorDbPanel();
+          return;
+        }
+        setVectorDbStatus("checking", "Loading");
+        renderVectorDbPanel();
+        try {
+          await openVectorDb();
+          await syncVectorDbFromConversations({ silent: true });
+        } catch (error) {
+          setVectorDbStatus("bad", "Error");
+          renderVectorDbPanel();
+        }
       }
 
       async function sha256Hex(value) {
@@ -3603,7 +3898,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
               <span>Client UI</span>
               <span>Hermes Router</span>
               <span>AI Engine</span>
-              <span>Local Memory</span>
+              <span>Vector DB</span>
             </div>
             <div class="prompt-grid">
               ${prompts
@@ -3709,6 +4004,16 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         $("opsSecurityMeta").textContent = state.settingsUnlocked ? "Controls open" : "API controls gated";
       }
 
+      function renderVectorDbPanel() {
+        const pill = $("vectorDbPill");
+        if (!pill) return;
+        pill.innerHTML = `<span class="${statusDotClass(state.vectorDbStatus)}"></span><span>${escapeHtml(state.vectorDbStatus.label)}</span>`;
+        $("vectorDbRecordMeta").textContent = `${state.vectorDbRecords} vector record`;
+        $("vectorDbCacheMeta").textContent = `Cache ${formatBytes(state.vectorDbBytes)}`;
+        $("syncVectorDbButton").disabled = state.vectorDbSyncing;
+        $("clearVectorDbButton").disabled = state.vectorDbSyncing || state.vectorDbRecords === 0;
+      }
+
       function render() {
         const conversation = activeConversation();
         $("chatTitle").textContent = conversation?.title || "Chat baru";
@@ -3733,6 +4038,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         $("sendButton").setAttribute("aria-label", state.sending ? "Stop" : "Kirim");
         renderSecurityGate();
         renderOpsPanel();
+        renderVectorDbPanel();
         renderCodePanel();
         renderSkillsPanel();
         updateVoxelMood();
@@ -4514,6 +4820,8 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         $("deleteButton").addEventListener("click", deleteConversation);
         $("clearHistoryButton").addEventListener("click", clearOldConversations);
         $("downloadButton").addEventListener("click", exportTranscript);
+        $("syncVectorDbButton").addEventListener("click", () => syncVectorDbFromConversations({ silent: false }));
+        $("clearVectorDbButton").addEventListener("click", clearVectorDbCache);
         $("settingsButton").addEventListener("click", () => {
           requestSettingsAccess("connection", { forcePrompt: true, message: "Masukkan password Set." });
         });
@@ -4702,6 +5010,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       render();
       resizeInput();
       initVoxelWorld();
+      initVectorDb();
     </script>
   </body>
 </html>
