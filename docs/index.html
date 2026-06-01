@@ -645,6 +645,65 @@
         animation-delay: 240ms;
       }
 
+      .thinking-loader {
+        min-height: 34px;
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        color: var(--ink);
+        font-size: 14px;
+        font-weight: 850;
+      }
+
+      .thinking-copy {
+        white-space: nowrap;
+      }
+
+      .thinking-copy::after {
+        content: "";
+        display: inline-block;
+        width: 18px;
+        animation: thinkingDots 1.2s steps(4, end) infinite;
+      }
+
+      .thinking-spinner {
+        position: relative;
+        width: 32px;
+        height: 32px;
+        flex: 0 0 auto;
+      }
+
+      .thinking-spinner::before,
+      .thinking-spinner::after {
+        content: "";
+        position: absolute;
+        inset: 2px;
+        border: 3px solid transparent;
+        border-top-color: var(--brand);
+        border-right-color: var(--warn);
+        border-radius: 50%;
+        animation: thinkingSpin 900ms linear infinite;
+      }
+
+      .thinking-spinner::after {
+        inset: 9px;
+        border-width: 3px;
+        border-top-color: var(--ink);
+        border-right-color: transparent;
+        border-bottom-color: var(--brand);
+        animation-duration: 620ms;
+        animation-direction: reverse;
+      }
+
+      .thinking-core {
+        position: absolute;
+        inset: 12px;
+        border-radius: 50%;
+        background: var(--brand);
+        box-shadow: 0 0 14px rgba(15, 118, 110, 0.45);
+        animation: thinkingPulse 760ms ease-in-out infinite alternate;
+      }
+
       @keyframes typing {
         0%,
         100% {
@@ -655,6 +714,43 @@
         50% {
           opacity: 1;
           transform: translateY(-2px);
+        }
+      }
+
+      @keyframes thinkingSpin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      @keyframes thinkingPulse {
+        from {
+          opacity: 0.45;
+          transform: scale(0.72);
+        }
+
+        to {
+          opacity: 1;
+          transform: scale(1.08);
+        }
+      }
+
+      @keyframes thinkingDots {
+        0% {
+          content: "";
+        }
+
+        25% {
+          content: ".";
+        }
+
+        50% {
+          content: "..";
+        }
+
+        75%,
+        100% {
+          content: "...";
         }
       }
 
@@ -1673,13 +1769,48 @@
         filter: brightness(1.14);
       }
 
-      .typing span {
+      .typing span,
+      .thinking-spinner::before,
+      .thinking-spinner::after,
+      .thinking-core {
         width: 8px;
         height: 8px;
         border-radius: 1px;
         background: #f4c542;
         box-shadow: 0 0 12px #f4c542;
         animation: typing 760ms infinite steps(2, end);
+      }
+
+      .thinking-loader {
+        color: #fff4bf;
+      }
+
+      .thinking-spinner {
+        width: 34px;
+        height: 34px;
+        filter: drop-shadow(0 0 8px rgba(244, 197, 66, 0.26));
+      }
+
+      .thinking-spinner::before,
+      .thinking-spinner::after {
+        width: auto;
+        height: auto;
+        border-radius: 2px;
+        background: transparent;
+        box-shadow: inset 0 0 0 2px rgba(244, 197, 66, 0.2);
+        animation: thinkingSpin 900ms steps(8, end) infinite;
+      }
+
+      .thinking-spinner::after {
+        animation-duration: 620ms;
+        animation-direction: reverse;
+      }
+
+      .thinking-core {
+        width: auto;
+        height: auto;
+        border-radius: 2px;
+        animation: thinkingPulse 760ms steps(2, end) infinite alternate;
       }
 
       .composer-wrap {
@@ -4001,7 +4132,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           .map((message) => {
             const role = message.role === "user" ? "YOU" : assistantLabel();
             const body = message.pending && !message.content
-              ? '<span class="typing"><span></span><span></span><span></span></span>'
+              ? '<div class="thinking-loader" role="status" aria-live="polite"><span class="thinking-copy">Saya sedang berpikir</span><span class="thinking-spinner" aria-hidden="true"><span class="thinking-core"></span></span></div>'
               : `<div class="message-text">${escapeHtml(message.content)}</div>`;
             return `
               <article class="message-row ${message.role}">
