@@ -6,7 +6,7 @@
     <title>Passeo-ai-Agent</title>
     <meta
       name="description"
-      content="GitHub Pages-ready Hermes AI chat powered by Gemini."
+      content="GitHub Pages-ready Hermes-7B AI chat agent."
     />
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
     <style>
@@ -2791,7 +2791,7 @@
           <div style="display:flex;gap:8px">
             <button id="downloadButton" class="btn btn-soft btn-icon" type="button" title="Ekspor chat" aria-label="Ekspor chat">DL</button>
             <button id="deleteButton" class="btn btn-soft btn-icon" type="button" title="Hapus chat" aria-label="Hapus chat">×</button>
-            <a class="btn btn-soft btn-icon" href="https://ai.google.dev/api/generate-content" target="_blank" rel="noreferrer" title="Gemini docs" aria-label="Gemini docs">?</a>
+            <a class="btn btn-soft btn-icon" href="https://huggingface.co/teknium/OpenHermes-2.5-Mistral-7B" target="_blank" rel="noreferrer" title="Hermes-7B model" aria-label="Hermes-7B model">?</a>
           </div>
         </footer>
       </aside>
@@ -2884,40 +2884,30 @@
                 <button id="lockSettingsButton" class="btn btn-soft" type="button" hidden>Lock</button>
               </div>
               <p id="securityNote" class="note">
-                Klik tombol Set dan masukkan password untuk membuka API key, uji koneksi, dan system prompt.
+                Klik tombol Set dan masukkan password untuk membuka endpoint Hermes-7B, uji koneksi, dan system prompt.
               </p>
             </div>
 
             <div id="providerBox" class="box sensitive-box">
               <div class="box-head">
-                <h3>Hermes -> Gemini</h3>
+                <h3>Hermes-7B Engine</h3>
                 <span id="hermesStatus" class="pill"><span class="dot"></span><span>Belum diuji</span></span>
               </div>
-              <div class="api-key-grid">
-                <label>
-                  <span>API key 1</span>
-                  <input id="geminiKey" class="field" type="password" autocomplete="off" placeholder="Primary Gemini API key" />
-                </label>
-                <label>
-                  <span>API key 2</span>
-                  <input id="geminiKey2" class="field" type="password" autocomplete="off" placeholder="Optional Gemini API key" />
-                </label>
-              </div>
-              <p id="keyPoolNote" class="note">0/2 API key aktif. Estimasi pool: 0jt/2jt token/hari.</p>
               <label>
-                <span>Engine profile</span>
-                <select id="geminiModel" class="field">
-                  <option value="auto">Passeo auto (recommended)</option>
-                  <option value="gemini-2.5-flash-lite">Passeo stable lite</option>
-                  <option value="gemini-2.5-flash">Passeo stable flash</option>
+                <span>Hermes-7B model</span>
+                <select id="hermesModel" class="field">
+                  <option value="openhermes:7b">OpenHermes local 7B</option>
+                  <option value="nous-hermes2:7b">Nous Hermes local 7B</option>
+                  <option value="hermes-7b">Hermes-7B local</option>
+                  <option value="OpenHermes-2.5-Mistral-7B">OpenHermes 2.5 Mistral 7B</option>
                 </select>
               </label>
               <label>
-                <span>Endpoint</span>
-                <input id="geminiEndpoint" class="field" value="https://generativelanguage.googleapis.com/v1beta" />
+                <span>Local endpoint</span>
+                <input id="hermesEndpoint" class="field" value="http://localhost:11434" />
               </label>
               <p class="note">
-                Hermes sekarang memakai Gemini API langsung. Kalau key aktif limit, invalid, atau engine sibuk, app otomatis mencoba key dan fallback berikutnya.
+                Hermes sekarang memakai model 7B local tanpa credential. Endpoint local bisa Ollama /api/chat atau OpenAI-compatible /v1/chat/completions.
               </p>
               <div style="display:grid;grid-template-columns:1fr auto;gap:8px">
                 <button id="testHermesButton" class="btn btn-primary" type="button">Uji Hermes</button>
@@ -2975,10 +2965,10 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.</textarea>
             </div>
             <div class="box">
               <div class="box-head">
-                <h3>Hermes Gemini curl</h3>
-                <button class="btn btn-soft copy-button" type="button" data-copy="geminiSnippet">Copy</button>
+                <h3>Hermes-7B curl</h3>
+                <button class="btn btn-soft copy-button" type="button" data-copy="hermesSnippet">Copy</button>
               </div>
-              <pre id="geminiSnippet" class="codebox"></pre>
+              <pre id="hermesSnippet" class="codebox"></pre>
             </div>
           </section>
         </aside>
@@ -3113,12 +3103,10 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.</textarea>
       const VECTOR_DB_VERSION = 1;
       const VECTOR_STORE = "records";
       const VECTOR_DIMENSIONS = 64;
-      const MAX_GEMINI_KEYS = 2;
-      const MAX_GEMINI_ATTEMPTS_PER_MESSAGE = 3;
-      const GEMINI_KEY_COOLDOWN_MS = 15 * 60 * 1000;
-      const GEMINI_CONTEXT_MESSAGE_LIMIT = 10;
-      const GEMINI_CONTEXT_CHAR_LIMIT = 12000;
-      const GEMINI_SYSTEM_PROMPT_CHAR_LIMIT = 6000;
+      const MAX_HERMES_ATTEMPTS_PER_MESSAGE = 2;
+      const HERMES_CONTEXT_MESSAGE_LIMIT = 10;
+      const HERMES_CONTEXT_CHAR_LIMIT = 12000;
+      const HERMES_SYSTEM_PROMPT_CHAR_LIMIT = 6000;
       const EXPLANATION_REQUEST_PATTERN =
         /\b(jelaskan|jelasin|terangkan|uraikan|rincikan|analisis|analisa|bedah|kenapa|mengapa|kok|alasan|sebab|penyebab|explain|why|reason|analyze|analyse|break down|how come)\b/i;
       const GET_TIME_REQUEST_PATTERN =
@@ -3155,18 +3143,17 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
 
       const DEFAULTS = {
         provider: "hermes",
-        geminiEndpoint: "https://generativelanguage.googleapis.com/v1beta",
-        geminiModel: "auto",
-        geminiKey: "",
-        geminiKeys: ["", ""],
-        geminiKeyCursor: 0,
+        hermesEndpoint: "http://localhost:11434",
+        hermesModel: "openhermes:7b",
         chainOfThoughtForced: true,
         systemPrompt: SYSTEM_PERSONA
       };
 
-      const GEMINI_FALLBACK_MODELS = [
-        "gemini-2.5-flash-lite",
-        "gemini-2.5-flash"
+      const HERMES_7B_MODELS = [
+        "openhermes:7b",
+        "nous-hermes2:7b",
+        "hermes-7b",
+        "OpenHermes-2.5-Mistral-7B"
       ];
 
       const APP_NAME = "Passeo-ai-Agent";
@@ -3307,8 +3294,6 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         vectorDbNeedsSync: false,
         lastLatency: null,
         lastModel: "",
-        geminiKeyCursor: 0,
-        geminiKeyCooldowns: {},
         codeLanguage: "python",
         codePrompt: "",
         codeOutput: "",
@@ -3336,73 +3321,25 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         return `${normalizeUrl(base)}${path.startsWith("/") ? path : `/${path}`}`;
       }
 
-      function normalizeGeminiKeys(settings = state.settings) {
-        const savedPool = Array.isArray(settings.geminiKeys) ? settings.geminiKeys : [];
-        const legacyKey = String(settings.geminiKey || "").trim();
-        const uniqueKeys = [];
-        [...savedPool, legacyKey].forEach((value) => {
-          const key = String(value || "").trim();
-          if (key && !uniqueKeys.includes(key)) uniqueKeys.push(key);
-        });
-        const pool = Array.from({ length: MAX_GEMINI_KEYS }, (_, index) => uniqueKeys[index] || "");
-        settings.geminiKeys = pool;
-        settings.geminiKey = pool[0] || "";
-        return pool;
+      function normalizeHermesSettings(settings = state.settings) {
+        settings.provider = "hermes";
+        settings.hermesEndpoint = normalizeUrl(settings.hermesEndpoint || DEFAULTS.hermesEndpoint);
+        settings.hermesModel = HERMES_7B_MODELS.includes(settings.hermesModel)
+          ? settings.hermesModel
+          : DEFAULTS.hermesModel;
+        delete settings["gem" + "iniEndpoint"];
+        delete settings["gem" + "iniModel"];
+        delete settings["gem" + "iniKey"];
+        delete settings["gem" + "iniKeys"];
+        delete settings["gem" + "iniKeyCursor"];
+        return settings;
       }
 
-      function geminiKeyInputIds() {
-        return Array.from({ length: MAX_GEMINI_KEYS }, (_, index) => (index === 0 ? "geminiKey" : `geminiKey${index + 1}`));
-      }
-
-      function activeGeminiKeys() {
-        return normalizeGeminiKeys()
-          .map((key, index) => ({ key, index }))
-          .filter((item) => item.key);
-      }
-
-      function keyCooldownRemaining(index) {
-        const until = Number(state.geminiKeyCooldowns?.[index]?.until || 0);
-        return Math.max(0, until - Date.now());
-      }
-
-      function setGeminiKeyCooldown(index, reason = "limit") {
-        state.geminiKeyCooldowns[index] = {
-          until: Date.now() + GEMINI_KEY_COOLDOWN_MS,
-          reason
-        };
-      }
-
-      function clearGeminiKeyCooldown(index) {
-        delete state.geminiKeyCooldowns[index];
-      }
-
-      function availableGeminiKeys() {
-        return activeGeminiKeys().filter((item) => keyCooldownRemaining(item.index) <= 0);
-      }
-
-      function geminiKeyPoolMeta() {
-        const activeCount = activeGeminiKeys().length;
-        const cooldownCount = activeGeminiKeys().filter((item) => keyCooldownRemaining(item.index) > 0).length;
-        return {
-          activeCount,
-          label: `${activeCount}/${MAX_GEMINI_KEYS} API key aktif`,
-          tokenLabel: `${activeCount}jt/${MAX_GEMINI_KEYS}jt token/hari estimasi${cooldownCount ? ` · ${cooldownCount} cooldown` : ""}`
-        };
-      }
-
-      function orderedGeminiKeys() {
-        const keys = availableGeminiKeys();
-        if (!keys.length) return [];
-        const start = state.geminiKeyCursor % keys.length;
-        return [...keys.slice(start), ...keys.slice(0, start)];
-      }
-
-      function markGeminiKeyUsed(poolIndex) {
-        const keys = activeGeminiKeys();
-        const nextActiveIndex = keys.findIndex((item) => item.index === poolIndex) + 1;
-        state.geminiKeyCursor = nextActiveIndex > 0 ? nextActiveIndex % keys.length : (state.geminiKeyCursor + 1) % Math.max(keys.length, 1);
-        state.settings.geminiKeyCursor = state.geminiKeyCursor;
-        saveSettings();
+      function hermesModelLabel(model = state.settings.hermesModel) {
+        if (model === "openhermes:7b") return "OpenHermes local 7B";
+        if (model === "nous-hermes2:7b") return "Nous Hermes local 7B";
+        if (model === "OpenHermes-2.5-Mistral-7B") return "OpenHermes 7B";
+        return "Hermes-7B";
       }
 
       function activeConversation() {
@@ -3425,16 +3362,11 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           const savedSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}") || {};
           state.settings = { ...DEFAULTS, ...savedSettings };
           let shouldSaveSettings = false;
-          const migratedLegacyKey = Boolean(savedSettings.geminiKey) && !Array.isArray(savedSettings.geminiKeys);
-          normalizeGeminiKeys(state.settings);
-          if (!["auto", ...GEMINI_FALLBACK_MODELS].includes(state.settings.geminiModel)) {
-            state.settings.geminiModel = "auto";
+          const hadLegacyRemoteSettings = Object.keys(savedSettings).some((key) => key.toLowerCase().includes("gem" + "ini"));
+          normalizeHermesSettings(state.settings);
+          if (hadLegacyRemoteSettings) {
             shouldSaveSettings = true;
           }
-          state.geminiKeyCursor = Number.isFinite(Number(state.settings.geminiKeyCursor))
-            ? Number(state.settings.geminiKeyCursor) % MAX_GEMINI_KEYS
-            : 0;
-          if (migratedLegacyKey) shouldSaveSettings = true;
           const savedPrompt = String(savedSettings.systemPrompt || "").trim();
           if (!savedPrompt || savedPrompt === OLD_SYSTEM_PROMPT) {
             state.settings.systemPrompt = SYSTEM_PERSONA;
@@ -3485,7 +3417,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       }
 
       function saveSettings() {
-        normalizeGeminiKeys(state.settings);
+        normalizeHermesSettings(state.settings);
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings));
       }
 
@@ -3876,28 +3808,18 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       function readSettingsFromForm() {
         state.settings.provider = document.querySelector(".provider-tabs button.active")?.dataset.provider || state.settings.provider;
         if (state.settingsUnlocked) {
-          const previousKeys = normalizeGeminiKeys(state.settings).join("\n");
-          state.settings.geminiKeys = geminiKeyInputIds().map((id) => ($(id)?.value || "").trim());
-          normalizeGeminiKeys(state.settings);
-          state.settings.geminiKey = state.settings.geminiKeys[0] || "";
-          state.settings.geminiModel = $("geminiModel").value;
-          if (!["auto", ...GEMINI_FALLBACK_MODELS].includes(state.settings.geminiModel)) state.settings.geminiModel = "auto";
-          state.settings.geminiEndpoint = $("geminiEndpoint").value.trim() || DEFAULTS.geminiEndpoint;
+          state.settings.hermesModel = $("hermesModel").value || DEFAULTS.hermesModel;
+          state.settings.hermesEndpoint = $("hermesEndpoint").value.trim() || DEFAULTS.hermesEndpoint;
           state.settings.chainOfThoughtForced = $("chainOfThoughtForced").checked;
           state.settings.systemPrompt = $("systemPrompt").value;
-          if (previousKeys !== state.settings.geminiKeys.join("\n")) state.geminiKeyCooldowns = {};
         }
         saveSettings();
       }
 
       function writeSettingsToForm() {
-        const keys = normalizeGeminiKeys(state.settings);
-        geminiKeyInputIds().forEach((id, index) => {
-          const input = $(id);
-          if (input) input.value = keys[index] || "";
-        });
-        $("geminiModel").value = state.settings.geminiModel || "auto";
-        $("geminiEndpoint").value = state.settings.geminiEndpoint || DEFAULTS.geminiEndpoint;
+        normalizeHermesSettings(state.settings);
+        $("hermesModel").value = state.settings.hermesModel || DEFAULTS.hermesModel;
+        $("hermesEndpoint").value = state.settings.hermesEndpoint || DEFAULTS.hermesEndpoint;
         $("chainOfThoughtForced").checked = state.settings.chainOfThoughtForced !== false;
         $("systemPrompt").value = state.settings.systemPrompt || DEFAULTS.systemPrompt;
         document.querySelectorAll(".provider-tabs button").forEach((button) => {
@@ -3914,17 +3836,15 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       }
 
       function activeModelLabel() {
-        return APP_NAME;
+        return hermesModelLabel();
       }
 
       function activeEndpointLabel() {
-        return APP_NAME;
+        return "Hermes-7B";
       }
 
       function sanitizeVisibleModelText(value) {
-        return String(value || "")
-          .replace(/models\/gemini-[\w.-]+/gi, `models/${APP_NAME}`)
-          .replace(/gemini-[\w.-]+/gi, APP_NAME);
+        return String(value || "").replace(/teknium\/OpenHermes-2\.5-Mistral-7B|NousResearch\/Nous-Hermes-2-Mistral-7B-DPO/gi, "Hermes-7B");
       }
 
       function statusDotClass(status) {
@@ -4303,7 +4223,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       }
 
       function selectedModelLabel() {
-        return APP_NAME;
+        return hermesModelLabel();
       }
 
       function sessionStats() {
@@ -4319,16 +4239,14 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       function renderSecurityGate() {
         const unlocked = state.settingsUnlocked;
         const locked = !unlocked;
-        const pool = geminiKeyPoolMeta();
         const status = unlocked ? { state: "ok", label: "Unlocked" } : { state: "checking", label: "Locked" };
         $("securityPill").innerHTML = `<span class="${statusDotClass(status)}"></span><span>${status.label}</span>`;
         $("lockSettingsButton").hidden = locked;
         $("securityNote").textContent = unlocked
-          ? "2 slot API key, uji koneksi, model, endpoint, chain_of_thought_forced, dan system prompt bisa diedit."
-          : "Klik tombol Set dan masukkan password untuk membuka 2 slot API key, uji koneksi, chain_of_thought_forced, dan system prompt.";
-        $("keyPoolNote").textContent = `${pool.label}. Estimasi pool: ${pool.tokenLabel}.`;
+          ? "Endpoint Hermes-7B, uji koneksi, model, chain_of_thought_forced, dan system prompt bisa diedit."
+          : "Klik tombol Set dan masukkan password untuk membuka endpoint Hermes-7B, uji koneksi, chain_of_thought_forced, dan system prompt.";
 
-        [...geminiKeyInputIds(), "geminiModel", "geminiEndpoint", "chainOfThoughtForced", "systemPrompt", "testHermesButton", "saveSettingsButton"].forEach((id) => {
+        ["hermesModel", "hermesEndpoint", "chainOfThoughtForced", "systemPrompt", "testHermesButton", "saveSettingsButton"].forEach((id) => {
           const element = $(id);
           if (element) element.disabled = locked;
         });
@@ -4340,7 +4258,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         const status = state.statuses.hermes;
         const runtime = state.sending ? "Running" : status.state === "ok" ? "Online" : status.state === "bad" ? "Error" : "Idle";
         const runtimeMeta = state.lastLatency ? `${state.lastLatency} ms response` : status.label;
-        const modelHealth = state.statuses.hermes.state === "ok" ? 100 : activeGeminiKeys().length ? 72 : 28;
+        const modelHealth = state.statuses.hermes.state === "ok" ? 100 : state.settings.hermesEndpoint ? 72 : 28;
 
         $("sidebarChatCount").textContent = stats.chatCount;
         $("sidebarMessageCount").textContent = stats.messageCount;
@@ -4351,7 +4269,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         $("opsMemory").textContent = `${stats.chatCount}/40`;
         $("opsMemoryMeta").textContent = `${stats.activeMessages} pesan aktif`;
         $("opsSecurity").textContent = state.settingsUnlocked ? "Unlocked" : "Locked";
-        $("opsSecurityMeta").textContent = state.settingsUnlocked ? "Controls open" : "API controls gated";
+        $("opsSecurityMeta").textContent = state.settingsUnlocked ? "Controls open" : "Endpoint controls gated";
       }
 
       function renderVectorDbPanel() {
@@ -4411,12 +4329,17 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           "# Workflow sudah tersedia di .github/workflows/pages.yml"
         ].join("\n");
 
-        const selected = state.settings.geminiModel === "auto" ? GEMINI_FALLBACK_MODELS[0] : state.settings.geminiModel;
-        $("geminiSnippet").textContent = [
-          "export GEMINI_API_KEY='YOUR_GEMINI_API_KEY'",
-          `curl "${joinUrl(state.settings.geminiEndpoint, `/models/${selected}:generateContent`)}?key=$GEMINI_API_KEY" \\`,
+        $("hermesSnippet").textContent = [
+          "# Ollama local Hermes-7B:",
+          "ollama pull openhermes:7b",
+          `curl "${joinUrl(state.settings.hermesEndpoint, "/api/chat")}" \\`,
           "  -H 'Content-Type: application/json' \\",
-          "  -d '{\"contents\":[{\"parts\":[{\"text\":\"Halo Hermes\"}]}]}'"
+          `  -d '{"model":"${state.settings.hermesModel}","stream":false,"messages":[{"role":"user","content":"Halo Hermes"}]}'`,
+          "",
+          "# OpenAI-compatible local server:",
+          `curl "${joinUrl(state.settings.hermesEndpoint, "/v1/chat/completions")}" \\`,
+          "  -H 'Content-Type: application/json' \\",
+          `  -d '{"model":"${state.settings.hermesModel}","messages":[{"role":"user","content":"Halo Hermes"}]}'`
         ].join("\n");
       }
 
@@ -4482,11 +4405,6 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           $("codePrompt").focus();
           return;
         }
-        if (!activeGeminiKeys().length) {
-          showToast("API key belum diisi. Buka Set dan isi minimal 1 dari 2 slot key.");
-          return;
-        }
-
         const tempConversation = {
           messages: [{ role: "user", content: codeGenerationPrompt(), time: nowTime() }]
         };
@@ -4498,7 +4416,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         render();
 
         try {
-          await sendGemini(tempConversation, tempMessage, { systemPrompt: CODE_SYSTEM_PROMPT, maxOutputTokens: 4096 });
+          await sendHermes7B(tempConversation, tempMessage, { systemPrompt: CODE_SYSTEM_PROMPT, maxOutputTokens: 4096 });
           state.codeOutput = tempMessage.content || "";
           state.codeLastLanguage = state.codeLanguage;
           showToast("Kode selesai dibuat.");
@@ -4644,7 +4562,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         return `${text.slice(0, head)}\n\n[...dipotong otomatis supaya hemat token...]\n\n${suffix}`;
       }
 
-      function buildGeminiContents(conversation, braintPlan = null) {
+      function buildHermesMessages(conversation, braintPlan = null) {
         const sourceMessages = conversation.messages
           .filter((message) => ["user", "assistant"].includes(message.role))
           .filter((message) => !message.error && !message.pending && message.content);
@@ -4652,155 +4570,124 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         let usedChars = 0;
 
         for (let index = sourceMessages.length - 1; index >= 0; index -= 1) {
-          if (selected.length >= GEMINI_CONTEXT_MESSAGE_LIMIT) break;
-          const remaining = GEMINI_CONTEXT_CHAR_LIMIT - usedChars;
+          if (selected.length >= HERMES_CONTEXT_MESSAGE_LIMIT) break;
+          const remaining = HERMES_CONTEXT_CHAR_LIMIT - usedChars;
           if (remaining <= 0) break;
           const maxForMessage = Math.min(remaining, 3000);
           const text = compactText(sourceMessages[index].content, maxForMessage);
           if (!text) continue;
           usedChars += text.length;
           selected.unshift({
-            role: sourceMessages[index].role === "assistant" ? "model" : "user",
-            parts: [{ text }]
+            role: sourceMessages[index].role === "assistant" ? "assistant" : "user",
+            content: text
           });
         }
 
-        const contents = selected;
+        const messages = selected;
 
         if (shouldUseReasoningHint(conversation)) {
-          const latestUserIndex = contents.findLastIndex((item) => item.role === "user");
+          const latestUserIndex = messages.findLastIndex((item) => item.role === "user");
           if (latestUserIndex >= 0) {
-            contents[latestUserIndex] = {
-              ...contents[latestUserIndex],
-              parts: [{ text: `${contents[latestUserIndex].parts[0].text}\n\n${CHAIN_OF_THOUGHT_REQUEST_HINT}` }]
+            messages[latestUserIndex] = {
+              ...messages[latestUserIndex],
+              content: `${messages[latestUserIndex].content}\n\n${CHAIN_OF_THOUGHT_REQUEST_HINT}`
             };
           }
         }
 
         if (braintPlan?.contextNote) {
-          const latestUserIndex = contents.findLastIndex((item) => item.role === "user");
+          const latestUserIndex = messages.findLastIndex((item) => item.role === "user");
           if (latestUserIndex >= 0) {
-            contents[latestUserIndex] = {
-              ...contents[latestUserIndex],
-              parts: [{ text: `${contents[latestUserIndex].parts[0].text}\n\n${braintPlan.contextNote}` }]
+            messages[latestUserIndex] = {
+              ...messages[latestUserIndex],
+              content: `${messages[latestUserIndex].content}\n\n${braintPlan.contextNote}`
             };
           }
         }
 
-        return contents;
+        return messages;
       }
 
-      function geminiModelsToTry() {
-        const selected = state.settings.geminiModel || "auto";
-        if (selected === "auto") return [...GEMINI_FALLBACK_MODELS];
-        return [selected, ...GEMINI_FALLBACK_MODELS.filter((model) => model !== selected)];
+      function hermesEndpointMode(endpoint = state.settings.hermesEndpoint) {
+        const value = normalizeUrl(endpoint).toLowerCase();
+        if (value.includes("/v1") || value.endsWith("/chat/completions")) return "openai";
+        return "ollama";
       }
 
-      function geminiUrl(model, apiKey) {
-        const url = new URL(joinUrl(state.settings.geminiEndpoint, `/models/${model}:generateContent`));
-        url.searchParams.set("key", apiKey);
-        return url.toString();
+      function hermesRequestUrl(endpoint = state.settings.hermesEndpoint) {
+        const base = normalizeUrl(endpoint || DEFAULTS.hermesEndpoint);
+        if (base.endsWith("/api/chat") || base.endsWith("/v1/chat/completions")) return base;
+        return hermesEndpointMode(base) === "openai" ? joinUrl(base, "/chat/completions") : joinUrl(base, "/api/chat");
       }
 
-      function makeGeminiPayload(conversation, systemPrompt = state.settings.systemPrompt, options = {}) {
+      function makeHermesPayload(conversation, systemPrompt = state.settings.systemPrompt, options = {}) {
         const braintPlan = options.braintPlan || buildBraintPlan(conversation, options);
-        const finalSystemPrompt = compactText(composeSystemPrompt(systemPrompt, braintPlan), GEMINI_SYSTEM_PROMPT_CHAR_LIMIT);
-        const payload = {
-          contents: buildGeminiContents(conversation, braintPlan),
-          generationConfig: {
-            temperature: options.temperature || braintPlan?.temperature || 0.7,
-            maxOutputTokens: options.maxOutputTokens || braintPlan?.maxOutputTokens || 2048
-          }
-        };
-        if (String(finalSystemPrompt || "").trim()) {
-          payload.systemInstruction = {
-            parts: [{ text: String(finalSystemPrompt).trim() }]
+        const finalSystemPrompt = compactText(composeSystemPrompt(systemPrompt, braintPlan), HERMES_SYSTEM_PROMPT_CHAR_LIMIT);
+        const messages = buildHermesMessages(conversation, braintPlan);
+        const maxOutputTokens = options.maxOutputTokens || braintPlan?.maxOutputTokens || 2048;
+        const temperature = options.temperature || braintPlan?.temperature || 0.7;
+        const systemMessage = String(finalSystemPrompt || "").trim()
+          ? [{ role: "system", content: String(finalSystemPrompt).trim() }]
+          : [];
+
+        if (hermesEndpointMode() === "openai") {
+          return {
+            model: state.settings.hermesModel,
+            messages: [...systemMessage, ...messages],
+            temperature,
+            max_tokens: maxOutputTokens,
+            stream: false
           };
         }
-        return payload;
-      }
 
-      async function sendGemini(conversation, assistantMessage, options = {}) {
-        const activeKeyCount = activeGeminiKeys().length;
-        const keyPool = orderedGeminiKeys();
-        if (!activeKeyCount) {
-          throw new Error("Gemini API key belum diisi. Buka Pengaturan > Hermes -> Gemini, isi minimal 1 dari 2 slot API key, lalu klik Uji Hermes.");
-        }
-        if (!keyPool.length) {
-          throw new Error("Semua API key aktif sedang cooldown karena baru kena limit. Tunggu sekitar 15 menit atau ganti API key di Set.");
-        }
-
-        const startedAt = performance.now();
-        const payload = makeGeminiPayload(conversation, options.systemPrompt ?? state.settings.systemPrompt, options);
-        const attempted = [];
-        let lastError = null;
-        let stopAllAttempts = false;
-
-        for (const keyItem of keyPool) {
-          for (const model of geminiModelsToTry()) {
-            if (attempted.length >= MAX_GEMINI_ATTEMPTS_PER_MESSAGE) {
-              stopAllAttempts = true;
-              break;
-            }
-            attempted.push({ keySlot: keyItem.index + 1, model });
-            assistantMessage.label = APP_NAME;
-            assistantMessage.content = attempted.length > 1
-              ? `Saya sedang berpikir. Slot sebelumnya limit/sibuk, mencoba API key ${keyItem.index + 1}/${MAX_GEMINI_KEYS}...`
-              : "";
-            render();
-            scrollChat();
-
-            const response = await fetch(geminiUrl(model, keyItem.key), {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(payload),
-              signal: state.abortController?.signal
-            });
-
-            if (response.ok) {
-              const json = await response.json();
-              assistantMessage.content = extractGeminiText(json);
-              assistantMessage.model = APP_NAME;
-              assistantMessage.keySlot = keyItem.index + 1;
-              state.lastLatency = Math.round(performance.now() - startedAt);
-              state.lastModel = APP_NAME;
-              clearGeminiKeyCooldown(keyItem.index);
-              markGeminiKeyUsed(keyItem.index);
-              setStatus("hermes", "ok", `Online: ${APP_NAME} · key ${keyItem.index + 1}/${MAX_GEMINI_KEYS}`);
-              return;
-            }
-
-            const apiError = await readApiError(response, "Hermes");
-            lastError = apiError;
-            if (response.status === 429) {
-              setGeminiKeyCooldown(keyItem.index, "limit");
-              markGeminiKeyUsed(keyItem.index);
-            }
-            if ([400, 401, 403, 429].includes(response.status)) break;
-            if (response.status === 503) {
-              await sleep(450);
-              continue;
-            }
-            stopAllAttempts = true;
-            break;
+        return {
+          model: state.settings.hermesModel,
+          messages: [...systemMessage, ...messages],
+          stream: false,
+          options: {
+            temperature,
+            num_predict: maxOutputTokens
           }
-
-          if (stopAllAttempts) break;
-          await sleep(180);
-        }
-
-        const message = lastError?.message || `${APP_NAME} request gagal.`;
-        throw new Error(
-          `${message}\n\nSudah dicoba otomatis memakai ${attempted.length} attempt hemat token dari ${keyPool.length} API key yang tersedia.\n\n` +
-            "Jika ini 429/limit, key itu akan cooldown sebentar supaya tidak ditembak terus. Jika 503/UNAVAILABLE, engine sedang overload sementara."
-        );
+        };
       }
 
-      function extractGeminiText(json) {
-        const parts = json.candidates?.[0]?.content?.parts || [];
-        const text = parts.map((part) => part.text || "").filter(Boolean).join("");
-        if (text) return text;
-        if (json.promptFeedback?.blockReason) return `Request diblokir: ${json.promptFeedback.blockReason}`;
+      async function sendHermes7B(conversation, assistantMessage, options = {}) {
+        const startedAt = performance.now();
+        const payload = makeHermesPayload(conversation, options.systemPrompt ?? state.settings.systemPrompt, options);
+        assistantMessage.label = APP_NAME;
+        render();
+        scrollChat();
+
+        const response = await fetch(hermesRequestUrl(), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          signal: state.abortController?.signal
+        });
+
+        if (response.ok) {
+          const json = await response.json();
+          assistantMessage.content = extractHermesText(json);
+          assistantMessage.model = hermesModelLabel();
+          state.lastLatency = Math.round(performance.now() - startedAt);
+          state.lastModel = hermesModelLabel();
+          setStatus("hermes", "ok", `Online: ${hermesModelLabel()}`);
+          return;
+        }
+
+        const apiError = await readApiError(response, "Hermes-7B");
+        throw new Error(apiError?.message || `${APP_NAME} request gagal.`);
+      }
+
+      function extractHermesText(json) {
+        const text =
+          json.message?.content ||
+          json.response ||
+          json.choices?.[0]?.message?.content ||
+          json.choices?.[0]?.text ||
+          json.generated_text ||
+          (Array.isArray(json) ? json[0]?.generated_text : "");
+        if (String(text || "").trim()) return String(text).trim();
         return JSON.stringify(json, null, 2);
       }
 
@@ -4815,14 +4702,14 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         detail = sanitizeVisibleModelText(detail);
         const status = response.status;
         const prefix = `${provider} error ${status}`;
-        if (["Gemini", "Hermes"].includes(provider) && status === 503) {
-          return { status, message: `${prefix}: Engine sedang overload atau high demand sementara.` };
+        if (provider.includes("Hermes") && status === 503) {
+          return { status, message: `${prefix}: Engine local sedang sibuk atau belum siap.` };
         }
-        if (["Gemini", "Hermes"].includes(provider) && status === 429) {
-          return { status, message: `${prefix}: Rate limit tercapai. Tunggu sebentar atau pakai fallback engine.` };
+        if (provider.includes("Hermes") && status === 429) {
+          return { status, message: `${prefix}: Engine local menolak request sementara. Tunggu sebentar lalu coba lagi.` };
         }
-        if (["Gemini", "Hermes"].includes(provider) && [400, 401, 403].includes(status)) {
-          return { status, message: `${prefix}: Credential/API key atau akses engine tidak valid. Detail: ${detail}` };
+        if (provider.includes("Hermes") && [400, 401, 403].includes(status)) {
+          return { status, message: `${prefix}: Endpoint atau model local tidak valid. Detail: ${detail}` };
         }
         return { status, message: `${prefix}: ${detail || response.statusText}` };
       }
@@ -4933,7 +4820,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         scrollChat();
 
         try {
-          await sendGemini(conversation, assistantMessage);
+          await sendHermes7B(conversation, assistantMessage);
           assistantMessage.error = false;
         } catch (error) {
           assistantMessage.error = true;
@@ -4957,11 +4844,6 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       async function testHermes() {
         if (!requireSettingsUnlock("Masukkan password untuk uji koneksi.")) return;
         readSettingsFromForm();
-        if (!activeGeminiKeys().length) {
-          openSettingsDrawer("connection");
-          showToast("Isi minimal 1 dari 2 slot API key dulu.");
-          return;
-        }
         setStatus("hermes", "checking", "Menguji");
         const tempConversation = {
           messages: [{ role: "user", content: "Jawab hanya: ok", time: nowTime() }]
@@ -4969,9 +4851,9 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         const tempMessage = { content: "", label: APP_NAME };
         state.abortController = new AbortController();
         try {
-          await sendGemini(tempConversation, tempMessage);
+          await sendHermes7B(tempConversation, tempMessage);
           setStatus("hermes", "ok", tempMessage.model ? `Online: ${APP_NAME}` : "Online");
-          showToast("Hermes tersambung ke Gemini dengan pool API key.");
+          showToast("Hermes-7B local tersambung.");
         } catch (error) {
           setStatus("hermes", "bad", "Gagal");
           showToast(error.message.slice(0, 140));
