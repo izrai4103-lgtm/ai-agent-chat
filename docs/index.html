@@ -2554,6 +2554,30 @@
         min-height: 100%;
       }
 
+      @media (max-width: 560px) {
+        html,
+        body,
+        #app {
+          height: var(--app-height, 100svh);
+          min-height: var(--app-height, 100svh);
+          overflow: hidden;
+        }
+
+        .shell,
+        .main {
+          height: var(--app-height, 100svh);
+          min-height: var(--app-height, 100svh);
+        }
+
+        .composer-wrap {
+          padding: 10px 12px calc(18px + env(safe-area-inset-bottom) + var(--composer-lift, 56px));
+        }
+
+        .chat-scroll {
+          padding-bottom: 12px;
+        }
+      }
+
       @media (prefers-reduced-motion: reduce) {
         *,
         *::before,
@@ -4584,6 +4608,17 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         initVoxelThreeWorld();
       }
 
+      function syncViewportMetrics() {
+        const viewport = window.visualViewport;
+        const fallbackHeight = window.innerHeight || document.documentElement.clientHeight || 720;
+        const visibleHeight = Math.max(320, Math.round(viewport?.height || fallbackHeight));
+        const layoutHeight = window.innerHeight || visibleHeight;
+        const coveredBottom = viewport ? Math.max(0, layoutHeight - viewport.height - viewport.offsetTop) : 0;
+        const lift = Math.max(56, Math.min(112, Math.round(coveredBottom + 18)));
+        document.documentElement.style.setProperty("--app-height", `${visibleHeight}px`);
+        document.documentElement.style.setProperty("--composer-lift", `${lift}px`);
+      }
+
       function initVoxelCanvasWorld() {
         const canvas = $("voxelWorld");
         if (!canvas || canvas.dataset.ready) return;
@@ -5048,6 +5083,10 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           button.addEventListener("click", () => copyTextFromElement(button.dataset.copy));
         });
         window.addEventListener("hashchange", applyHash);
+        window.addEventListener("resize", syncViewportMetrics);
+        window.addEventListener("orientationchange", () => setTimeout(syncViewportMetrics, 120));
+        window.visualViewport?.addEventListener("resize", syncViewportMetrics);
+        window.visualViewport?.addEventListener("scroll", syncViewportMetrics);
       }
 
       function applyHash() {
@@ -5064,6 +5103,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       }
 
       loadState();
+      syncViewportMetrics();
       writeSettingsToForm();
       writeCodeForm();
       bindEvents();
