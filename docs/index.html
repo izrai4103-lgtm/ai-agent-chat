@@ -821,7 +821,7 @@
           <img src="icon.svg" alt="" />
           <div>
             <div class="brand-title">Passeo-ai-Agent</div>
-            <div class="brand-subtitle">Gemini, Hermes, Ollama</div>
+            <div class="brand-subtitle">AI chat agent</div>
           </div>
         </header>
 
@@ -852,8 +852,8 @@
             <div class="title">
               <h1 id="chatTitle">Chat baru</h1>
               <div class="pills">
-                <span id="modelPill" class="pill">gemini-auto</span>
-                <span id="providerPill" class="pill"><span class="dot"></span><span>Gemini</span></span>
+                <span id="modelPill" class="pill">Passeo-ai-Agent</span>
+                <span id="providerPill" class="pill"><span class="dot"></span><span>Passeo-ai-Agent</span></span>
               </div>
             </div>
           </div>
@@ -1032,6 +1032,8 @@
         "gemini-3.5-flash"
       ];
 
+      const APP_NAME = "Passeo-ai-Agent";
+
       const prompts = [
         {
           title: "Cek koneksi",
@@ -1176,11 +1178,11 @@
       }
 
       function assistantLabel() {
-        return providerLabel().toUpperCase();
+        return APP_NAME;
       }
 
       function activeModelLabel() {
-        if (state.settings.provider === "gemini") return state.settings.geminiModel === "auto" ? "gemini-auto" : state.settings.geminiModel;
+        if (state.settings.provider === "gemini") return APP_NAME;
         if (state.settings.provider === "hermes") return state.settings.hermesModel || DEFAULTS.hermesModel;
         return state.settings.ollamaModel || DEFAULTS.ollamaModel;
       }
@@ -1283,7 +1285,7 @@
 
         inner.innerHTML = conversation.messages
           .map((message) => {
-            const role = message.role === "user" ? "YOU" : message.label || assistantLabel();
+            const role = message.role === "user" ? "YOU" : assistantLabel();
             const body = message.pending && !message.content
               ? '<span class="typing"><span></span><span></span><span></span></span>'
               : `<div class="message-text">${escapeHtml(message.content)}</div>`;
@@ -1313,7 +1315,7 @@
         $("chatTitle").textContent = conversation?.title || "Chat baru";
         $("modelPill").textContent = activeModelLabel();
         renderStatusPill($("providerPill"), state.settings.provider);
-        $("providerPill").lastElementChild.textContent = providerLabel();
+        $("providerPill").lastElementChild.textContent = APP_NAME;
         renderStatusPill($("statusPill"), state.settings.provider);
         renderStatusPill($("geminiStatus"), "gemini");
         renderStatusPill($("hermesStatus"), "hermes");
@@ -1473,9 +1475,9 @@
 
         for (const model of geminiModelsToTry()) {
           attempted.push(model);
-          assistantMessage.label = `GEMINI (${model})`;
+          assistantMessage.label = APP_NAME;
           assistantMessage.content = attempted.length > 1
-            ? `Model sebelumnya sedang sibuk. Mencoba ${model}...`
+            ? "Model sebelumnya sedang sibuk. Mencoba fallback..."
             : "";
           render();
           scrollChat();
@@ -1491,7 +1493,7 @@
             const json = await response.json();
             assistantMessage.content = extractGeminiText(json);
             assistantMessage.model = model;
-            setStatus("gemini", "ok", `Online: ${model}`);
+            setStatus("gemini", "ok", `Online: ${APP_NAME}`);
             return;
           }
 
@@ -1501,7 +1503,7 @@
           await sleep(450);
         }
 
-        const message = lastError?.message || "Gemini request gagal.";
+        const message = lastError?.message || `${APP_NAME} request gagal.`;
         throw new Error(
           `${message}\n\nModel yang dicoba: ${attempted.join(", ")}\n\n` +
             "Jika ini 503/UNAVAILABLE, penyebabnya model Gemini sedang overload. App sudah mencoba fallback; tunggu sebentar atau pilih model lain di Pengaturan."
@@ -1531,7 +1533,7 @@
         if (!response.ok) throw new Error((await readApiError(response, providerLabel(provider))).message);
         const json = await response.json();
         assistantMessage.content = extractOpenAiText(json);
-        assistantMessage.label = providerLabel(provider).toUpperCase();
+        assistantMessage.label = APP_NAME;
         setStatus(provider, "ok", "Online");
       }
 
@@ -1649,7 +1651,7 @@
         const tempConversation = {
           messages: [{ role: "user", content: "Jawab hanya: ok", time: nowTime() }]
         };
-        const tempMessage = { content: "", label: "GEMINI" };
+        const tempMessage = { content: "", label: APP_NAME };
         state.abortController = new AbortController();
         try {
           await sendGemini(tempConversation, tempMessage);
