@@ -6,7 +6,7 @@
     <title>Passeo-ai-Agent</title>
     <meta
       name="description"
-      content="GitHub Pages-ready AI chat for Gemini, Hermes Gateway, and Ollama."
+      content="GitHub Pages-ready Hermes AI chat powered by Gemini."
     />
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
     <style>
@@ -589,6 +589,10 @@
       .provider-tabs {
         grid-template-columns: repeat(3, minmax(0, 1fr));
         margin-bottom: 16px;
+      }
+
+      .provider-tabs-single {
+        grid-template-columns: 1fr;
       }
 
       .tabs button,
@@ -1689,29 +1693,27 @@
           </div>
 
           <section id="connectionPanel" class="settings-grid">
-            <div class="provider-tabs">
-              <button data-provider="gemini" class="active" type="button">Gemini</button>
-              <button data-provider="hermes" type="button">Hermes</button>
-              <button data-provider="ollama" type="button">Ollama</button>
+            <div class="provider-tabs provider-tabs-single">
+              <button data-provider="hermes" class="active" type="button">Hermes</button>
             </div>
 
             <div class="box">
               <div class="box-head">
-                <h3>Gemini API</h3>
-                <span id="geminiStatus" class="pill"><span class="dot"></span><span>Belum diuji</span></span>
+                <h3>Hermes -> Gemini</h3>
+                <span id="hermesStatus" class="pill"><span class="dot"></span><span>Belum diuji</span></span>
               </div>
               <label>
-                <span>API key</span>
+                <span>Gemini API key</span>
                 <input id="geminiKey" class="field" type="password" autocomplete="off" placeholder="Paste Gemini API key" />
               </label>
               <label>
                 <span>Model</span>
                 <select id="geminiModel" class="field">
                   <option value="auto">Auto fallback (recommended)</option>
-                  <option value="gemini-2.5-flash">gemini-2.5-flash</option>
-                  <option value="gemini-2.0-flash">gemini-2.0-flash</option>
-                  <option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite</option>
                   <option value="gemini-3.5-flash">gemini-3.5-flash</option>
+                  <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite</option>
+                  <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+                  <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite</option>
                 </select>
               </label>
               <label>
@@ -1719,48 +1721,12 @@
                 <input id="geminiEndpoint" class="field" value="https://generativelanguage.googleapis.com/v1beta" />
               </label>
               <p class="note">
-                Kalau Gemini membalas 503 atau 429, app otomatis mencoba model fallback berikutnya.
+                Hermes sekarang memakai Gemini API langsung. Kalau model membalas 503 atau 429, app otomatis mencoba fallback berikutnya.
               </p>
               <div style="display:grid;grid-template-columns:1fr auto;gap:8px">
-                <button id="testGeminiButton" class="btn btn-primary" type="button">Uji Gemini</button>
+                <button id="testHermesButton" class="btn btn-primary" type="button">Uji Hermes</button>
                 <button id="saveSettingsButton" class="btn btn-soft" type="button" title="Simpan" aria-label="Simpan">OK</button>
               </div>
-            </div>
-
-            <div class="box">
-              <div class="box-head">
-                <h3>Hermes Gateway</h3>
-                <span id="hermesStatus" class="pill"><span class="dot"></span><span>Belum diuji</span></span>
-              </div>
-              <label>
-                <span>Base URL</span>
-                <input id="hermesBaseUrl" class="field" value="http://127.0.0.1:8642/v1" />
-              </label>
-              <label>
-                <span>Bearer token</span>
-                <input id="hermesToken" class="field" type="password" autocomplete="off" value="change-me-local-dev" />
-              </label>
-              <label>
-                <span>Model</span>
-                <input id="hermesModel" class="field" value="hermes-agent" />
-              </label>
-              <button id="testHermesButton" class="btn btn-soft" type="button">Uji Hermes</button>
-            </div>
-
-            <div class="box">
-              <div class="box-head">
-                <h3>Ollama</h3>
-                <span id="ollamaStatus" class="pill"><span class="dot"></span><span>Belum diuji</span></span>
-              </div>
-              <label>
-                <span>Host</span>
-                <input id="ollamaBaseUrl" class="field" value="http://127.0.0.1:11434" />
-              </label>
-              <label>
-                <span>Model</span>
-                <input id="ollamaModel" class="field" value="gemma4" />
-              </label>
-              <button id="testOllamaButton" class="btn btn-soft" type="button">Uji Ollama</button>
             </div>
 
             <div class="box">
@@ -1806,17 +1772,10 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.</textarea>
             </div>
             <div class="box">
               <div class="box-head">
-                <h3>Gemini curl</h3>
+                <h3>Hermes Gemini curl</h3>
                 <button class="btn btn-soft copy-button" type="button" data-copy="geminiSnippet">Copy</button>
               </div>
               <pre id="geminiSnippet" class="codebox"></pre>
-            </div>
-            <div class="box">
-              <div class="box-head">
-                <h3>Hermes + Ollama</h3>
-                <button class="btn btn-soft copy-button" type="button" data-copy="localSnippet">Copy</button>
-              </div>
-              <pre id="localSnippet" class="codebox"></pre>
             </div>
           </section>
         </aside>
@@ -1857,23 +1816,18 @@ Contoh tone:
 Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
 
       const DEFAULTS = {
-        provider: "gemini",
+        provider: "hermes",
         geminiEndpoint: "https://generativelanguage.googleapis.com/v1beta",
         geminiModel: "auto",
         geminiKey: "",
-        hermesBaseUrl: "http://127.0.0.1:8642/v1",
-        hermesToken: "change-me-local-dev",
-        hermesModel: "hermes-agent",
-        ollamaBaseUrl: "http://127.0.0.1:11434",
-        ollamaModel: "gemma4",
         systemPrompt: SYSTEM_PERSONA
       };
 
       const GEMINI_FALLBACK_MODELS = [
+        "gemini-3.5-flash",
+        "gemini-3.1-flash-lite",
         "gemini-2.5-flash",
-        "gemini-2.0-flash",
-        "gemini-2.0-flash-lite",
-        "gemini-3.5-flash"
+        "gemini-2.5-flash-lite"
       ];
 
       const APP_NAME = "Passeo-ai-Agent";
@@ -1906,9 +1860,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         conversations: [],
         activeConversationId: null,
         statuses: {
-          gemini: { state: "idle", label: "Belum diuji" },
-          hermes: { state: "idle", label: "Belum diuji" },
-          ollama: { state: "idle", label: "Belum diuji" }
+          hermes: { state: "idle", label: "Belum diuji" }
         },
         drawerOpen: false,
         sidebarOpen: false,
@@ -1952,11 +1904,17 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         try {
           const savedSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}") || {};
           state.settings = { ...DEFAULTS, ...savedSettings };
+          let shouldSaveSettings = false;
           const savedPrompt = String(savedSettings.systemPrompt || "").trim();
           if (!savedPrompt || savedPrompt === OLD_SYSTEM_PROMPT) {
             state.settings.systemPrompt = SYSTEM_PERSONA;
-            saveSettings();
+            shouldSaveSettings = true;
           }
+          if (state.settings.provider !== "hermes") {
+            state.settings.provider = "hermes";
+            shouldSaveSettings = true;
+          }
+          if (shouldSaveSettings) saveSettings();
         } catch {
           state.settings = { ...DEFAULTS };
         }
@@ -1997,11 +1955,6 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         state.settings.geminiKey = $("geminiKey").value.trim();
         state.settings.geminiModel = $("geminiModel").value;
         state.settings.geminiEndpoint = $("geminiEndpoint").value.trim() || DEFAULTS.geminiEndpoint;
-        state.settings.hermesBaseUrl = $("hermesBaseUrl").value.trim() || DEFAULTS.hermesBaseUrl;
-        state.settings.hermesToken = $("hermesToken").value;
-        state.settings.hermesModel = $("hermesModel").value.trim() || DEFAULTS.hermesModel;
-        state.settings.ollamaBaseUrl = $("ollamaBaseUrl").value.trim() || DEFAULTS.ollamaBaseUrl;
-        state.settings.ollamaModel = $("ollamaModel").value.trim() || DEFAULTS.ollamaModel;
         state.settings.systemPrompt = $("systemPrompt").value;
         saveSettings();
       }
@@ -2010,11 +1963,6 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         $("geminiKey").value = state.settings.geminiKey || "";
         $("geminiModel").value = state.settings.geminiModel || "auto";
         $("geminiEndpoint").value = state.settings.geminiEndpoint || DEFAULTS.geminiEndpoint;
-        $("hermesBaseUrl").value = state.settings.hermesBaseUrl || DEFAULTS.hermesBaseUrl;
-        $("hermesToken").value = state.settings.hermesToken || DEFAULTS.hermesToken;
-        $("hermesModel").value = state.settings.hermesModel || DEFAULTS.hermesModel;
-        $("ollamaBaseUrl").value = state.settings.ollamaBaseUrl || DEFAULTS.ollamaBaseUrl;
-        $("ollamaModel").value = state.settings.ollamaModel || DEFAULTS.ollamaModel;
         $("systemPrompt").value = state.settings.systemPrompt || DEFAULTS.systemPrompt;
         document.querySelectorAll(".provider-tabs button").forEach((button) => {
           button.classList.toggle("active", button.dataset.provider === state.settings.provider);
@@ -2022,9 +1970,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       }
 
       function providerLabel(provider = state.settings.provider) {
-        if (provider === "gemini") return "Gemini";
-        if (provider === "hermes") return "Hermes";
-        return "Ollama";
+        return "Hermes";
       }
 
       function assistantLabel() {
@@ -2032,21 +1978,12 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       }
 
       function activeModelLabel() {
-        if (state.settings.provider === "gemini") return APP_NAME;
-        if (state.settings.provider === "hermes") return state.settings.hermesModel || DEFAULTS.hermesModel;
-        return state.settings.ollamaModel || DEFAULTS.ollamaModel;
+        return APP_NAME;
       }
 
       function activeEndpointLabel() {
-        if (state.settings.provider === "gemini") {
-          const model = state.settings.geminiModel === "auto" ? GEMINI_FALLBACK_MODELS[0] : state.settings.geminiModel;
-          return joinUrl(state.settings.geminiEndpoint, `/models/${model}:generateContent`);
-        }
-        if (state.settings.provider === "hermes") return joinUrl(state.settings.hermesBaseUrl, "/chat/completions");
-        const base = normalizeUrl(state.settings.ollamaBaseUrl).endsWith("/v1")
-          ? normalizeUrl(state.settings.ollamaBaseUrl)
-          : `${normalizeUrl(state.settings.ollamaBaseUrl)}/v1`;
-        return joinUrl(base, "/chat/completions");
+        const model = state.settings.geminiModel === "auto" ? GEMINI_FALLBACK_MODELS[0] : state.settings.geminiModel;
+        return joinUrl(state.settings.geminiEndpoint, `/models/${model}:generateContent`);
       }
 
       function statusDotClass(status) {
@@ -2106,7 +2043,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
             <div>
               <h2>Apa yang ingin kamu kerjakan?</h2>
               <p>
-                Mode aktif: ${providerLabel()}. Untuk Gemini, pilih model Auto supaya app bisa pindah model saat Gemini membalas overload 503 atau rate limit 429.
+                Mode aktif: Hermes. Engine tersambung langsung ke Gemini API dengan fallback model otomatis saat traffic sedang padat.
               </p>
             </div>
             <div class="prompt-grid">
@@ -2167,11 +2104,9 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         renderStatusPill($("providerPill"), state.settings.provider);
         $("providerPill").lastElementChild.textContent = APP_NAME;
         renderStatusPill($("statusPill"), state.settings.provider);
-        renderStatusPill($("geminiStatus"), "gemini");
         renderStatusPill($("hermesStatus"), "hermes");
-        renderStatusPill($("ollamaStatus"), "ollama");
         $("endpointMeta").textContent = activeEndpointLabel();
-        $("modeMeta").textContent = state.settings.provider === "gemini" ? "Auto fallback aktif" : "OpenAI-compatible";
+        $("modeMeta").textContent = "Hermes -> Gemini";
         $("drawerBackdrop").hidden = !state.drawerOpen;
         $("sidebar").classList.toggle("open", state.sidebarOpen);
         $("sidebarScreen").classList.toggle("open", state.sidebarOpen);
@@ -2202,18 +2137,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           "export GEMINI_API_KEY='YOUR_GEMINI_API_KEY'",
           `curl "${joinUrl(state.settings.geminiEndpoint, `/models/${selected}:generateContent`)}?key=$GEMINI_API_KEY" \\`,
           "  -H 'Content-Type: application/json' \\",
-          "  -d '{\"contents\":[{\"parts\":[{\"text\":\"Halo Gemini\"}]}]}'"
-        ].join("\n");
-
-        $("localSnippet").textContent = [
-          "ollama serve",
-          `ollama pull ${state.settings.ollamaModel || DEFAULTS.ollamaModel}`,
-          "",
-          "hermes gateway",
-          `curl ${joinUrl(state.settings.hermesBaseUrl, "/chat/completions")} \\`,
-          `  -H "Authorization: Bearer ${state.settings.hermesToken || DEFAULTS.hermesToken}" \\`,
-          "  -H 'Content-Type: application/json' \\",
-          `  -d '{"model":"${state.settings.hermesModel || DEFAULTS.hermesModel}","messages":[{"role":"user","content":"Halo"}]}'`
+          "  -d '{\"contents\":[{\"parts\":[{\"text\":\"Halo Hermes\"}]}]}'"
         ].join("\n");
       }
 
@@ -2258,26 +2182,6 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         showToast("Chat dihapus.");
       }
 
-      function providerHeaders(provider) {
-        if (provider === "hermes") {
-          const headers = { "Content-Type": "application/json" };
-          if (state.settings.hermesToken) headers.Authorization = `Bearer ${state.settings.hermesToken}`;
-          return headers;
-        }
-        return { "Content-Type": "application/json" };
-      }
-
-      function buildOpenAiMessages(conversation) {
-        const messages = conversation.messages
-          .filter((message) => ["user", "assistant"].includes(message.role))
-          .filter((message) => !message.error && !message.pending && message.content)
-          .map((message) => ({ role: message.role, content: message.content }));
-        if (state.settings.systemPrompt.trim()) {
-          messages.unshift({ role: "system", content: state.settings.systemPrompt.trim() });
-        }
-        return messages;
-      }
-
       function buildGeminiContents(conversation) {
         return conversation.messages
           .filter((message) => ["user", "assistant"].includes(message.role))
@@ -2317,7 +2221,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
 
       async function sendGemini(conversation, assistantMessage) {
         if (!state.settings.geminiKey) {
-          throw new Error("Gemini API key belum diisi. Buka Pengaturan > Gemini API, paste API key, lalu klik Uji Gemini.");
+          throw new Error("Gemini API key belum diisi. Buka Pengaturan > Hermes -> Gemini, paste API key, lalu klik Uji Hermes.");
         }
 
         const payload = makeGeminiPayload(conversation);
@@ -2344,11 +2248,11 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
             const json = await response.json();
             assistantMessage.content = extractGeminiText(json);
             assistantMessage.model = model;
-            setStatus("gemini", "ok", `Online: ${APP_NAME}`);
+            setStatus("hermes", "ok", `Online: ${APP_NAME}`);
             return;
           }
 
-          const apiError = await readApiError(response, "Gemini");
+          const apiError = await readApiError(response, "Hermes");
           lastError = apiError;
           if (![429, 503].includes(response.status)) break;
           await sleep(450);
@@ -2357,35 +2261,8 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         const message = lastError?.message || `${APP_NAME} request gagal.`;
         throw new Error(
           `${message}\n\nModel yang dicoba: ${attempted.join(", ")}\n\n` +
-            "Jika ini 503/UNAVAILABLE, penyebabnya model Gemini sedang overload. App sudah mencoba fallback; tunggu sebentar atau pilih model lain di Pengaturan."
+            "Jika ini 503/UNAVAILABLE, penyebabnya engine sedang overload. App sudah mencoba fallback; tunggu sebentar atau pilih model lain di Pengaturan."
         );
-      }
-
-      async function sendOpenAiCompatible(conversation, assistantMessage) {
-        const provider = state.settings.provider;
-        const isHermes = provider === "hermes";
-        const base = isHermes
-          ? state.settings.hermesBaseUrl
-          : normalizeUrl(state.settings.ollamaBaseUrl).endsWith("/v1")
-            ? state.settings.ollamaBaseUrl
-            : `${normalizeUrl(state.settings.ollamaBaseUrl)}/v1`;
-        const model = isHermes ? state.settings.hermesModel : state.settings.ollamaModel;
-        const response = await fetch(joinUrl(base, "/chat/completions"), {
-          method: "POST",
-          headers: providerHeaders(provider),
-          body: JSON.stringify({
-            model,
-            messages: buildOpenAiMessages(conversation),
-            stream: false
-          }),
-          signal: state.abortController.signal
-        });
-
-        if (!response.ok) throw new Error((await readApiError(response, providerLabel(provider))).message);
-        const json = await response.json();
-        assistantMessage.content = extractOpenAiText(json);
-        assistantMessage.label = APP_NAME;
-        setStatus(provider, "ok", "Online");
       }
 
       function extractGeminiText(json) {
@@ -2394,10 +2271,6 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         if (text) return text;
         if (json.promptFeedback?.blockReason) return `Request diblokir: ${json.promptFeedback.blockReason}`;
         return JSON.stringify(json, null, 2);
-      }
-
-      function extractOpenAiText(json) {
-        return json.choices?.[0]?.message?.content || json.choices?.[0]?.text || JSON.stringify(json, null, 2);
       }
 
       async function readApiError(response, provider) {
@@ -2410,13 +2283,13 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         }
         const status = response.status;
         const prefix = `${provider} error ${status}`;
-        if (provider === "Gemini" && status === 503) {
+        if (["Gemini", "Hermes"].includes(provider) && status === 503) {
           return { status, message: `${prefix}: Model sedang overload atau high demand sementara.` };
         }
-        if (provider === "Gemini" && status === 429) {
+        if (["Gemini", "Hermes"].includes(provider) && status === 429) {
           return { status, message: `${prefix}: Rate limit tercapai. Tunggu sebentar atau pakai model fallback.` };
         }
-        if (provider === "Gemini" && [400, 401, 403].includes(status)) {
+        if (["Gemini", "Hermes"].includes(provider) && [400, 401, 403].includes(status)) {
           return { status, message: `${prefix}: Credential/API key atau akses model tidak valid. Detail: ${detail}` };
         }
         return { status, message: `${prefix}: ${detail || response.statusText}` };
@@ -2465,8 +2338,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         scrollChat();
 
         try {
-          if (state.settings.provider === "gemini") await sendGemini(conversation, assistantMessage);
-          else await sendOpenAiCompatible(conversation, assistantMessage);
+          await sendGemini(conversation, assistantMessage);
           assistantMessage.error = false;
         } catch (error) {
           assistantMessage.error = true;
@@ -2485,12 +2357,10 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
 
       async function testActiveProvider() {
         readSettingsFromForm();
-        if (state.settings.provider === "gemini") return testGemini();
-        if (state.settings.provider === "hermes") return testHermes();
-        return testOllama();
+        return testHermes();
       }
 
-      async function testGemini() {
+      async function testHermes() {
         readSettingsFromForm();
         if (!state.settings.geminiKey) {
           state.drawerOpen = true;
@@ -2498,7 +2368,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           showToast("Paste Gemini API key dulu.");
           return;
         }
-        setStatus("gemini", "checking", "Menguji");
+        setStatus("hermes", "checking", "Menguji");
         const tempConversation = {
           messages: [{ role: "user", content: "Jawab hanya: ok", time: nowTime() }]
         };
@@ -2506,44 +2376,14 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         state.abortController = new AbortController();
         try {
           await sendGemini(tempConversation, tempMessage);
-          setStatus("gemini", "ok", tempMessage.model || "Online");
-          showToast("Gemini terhubung.");
+          setStatus("hermes", "ok", tempMessage.model ? `Online: ${APP_NAME}` : "Online");
+          showToast("Hermes tersambung ke Gemini.");
         } catch (error) {
-          setStatus("gemini", "bad", "Gagal");
+          setStatus("hermes", "bad", "Gagal");
           showToast(error.message.slice(0, 140));
         } finally {
           state.abortController = null;
           render();
-        }
-      }
-
-      async function testHermes() {
-        readSettingsFromForm();
-        setStatus("hermes", "checking", "Menguji");
-        try {
-          const response = await fetch(joinUrl(state.settings.hermesBaseUrl, "/models"), {
-            headers: providerHeaders("hermes")
-          });
-          if (!response.ok) throw new Error((await readApiError(response, "Hermes")).message);
-          setStatus("hermes", "ok", "Online");
-          showToast("Hermes terhubung.");
-        } catch (error) {
-          setStatus("hermes", "bad", "Gagal");
-          showToast(error.message.slice(0, 140));
-        }
-      }
-
-      async function testOllama() {
-        readSettingsFromForm();
-        setStatus("ollama", "checking", "Menguji");
-        try {
-          const response = await fetch(joinUrl(state.settings.ollamaBaseUrl, "/api/tags"));
-          if (!response.ok) throw new Error((await readApiError(response, "Ollama")).message);
-          setStatus("ollama", "ok", "Online");
-          showToast("Ollama terhubung.");
-        } catch (error) {
-          setStatus("ollama", "bad", "Gagal");
-          showToast(error.message.slice(0, 140));
         }
       }
 
@@ -3005,9 +2845,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
             render();
           });
         });
-        $("testGeminiButton").addEventListener("click", testGemini);
         $("testHermesButton").addEventListener("click", testHermes);
-        $("testOllamaButton").addEventListener("click", testOllama);
         $("saveSettingsButton").addEventListener("click", () => {
           readSettingsFromForm();
           render();

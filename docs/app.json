@@ -1,6 +1,6 @@
 {
   "title": "Passeo-ai-Agent",
-  "description": "A GitHub Pages-ready browser chat for Gemini, Hermes Gateway, and Ollama local models.",
+  "description": "A GitHub Pages-ready Hermes browser chat powered by Gemini.",
   "category": "Productivity",
   "icon": "icon.svg"
 }
