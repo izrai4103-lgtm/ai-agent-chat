@@ -698,7 +698,7 @@
       }
 
       .tabs {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         margin-bottom: 16px;
       }
 
@@ -2375,7 +2375,6 @@
 
           <div class="tabs">
             <button id="connectionTab" class="active" type="button">Koneksi</button>
-            <button id="codeTab" type="button">Code</button>
             <button id="setupTab" type="button">Setup</button>
           </div>
 
@@ -2462,7 +2461,36 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.</textarea>
             </div>
           </section>
 
-          <section id="codePanel" class="settings-grid" hidden>
+          <section id="setupPanel" class="settings-grid" hidden>
+            <div class="box">
+              <div class="box-head">
+                <h3>GitHub Pages</h3>
+                <button class="btn btn-soft copy-button" type="button" data-copy="githubSnippet">Copy</button>
+              </div>
+              <pre id="githubSnippet" class="codebox"></pre>
+            </div>
+            <div class="box">
+              <div class="box-head">
+                <h3>Hermes Gemini curl</h3>
+                <button class="btn btn-soft copy-button" type="button" data-copy="geminiSnippet">Copy</button>
+              </div>
+              <pre id="geminiSnippet" class="codebox"></pre>
+            </div>
+          </section>
+        </aside>
+      </div>
+
+      <div id="codeBackdrop" class="drawer-backdrop" hidden>
+        <aside class="drawer code-drawer" aria-label="Generated Code">
+          <header class="drawer-header">
+            <div>
+              <h2>Generated Code</h2>
+              <p>Passeo Code Forge</p>
+            </div>
+            <button id="closeCodeDrawerButton" class="btn btn-soft btn-icon" type="button" aria-label="Tutup Code">×</button>
+          </header>
+
+          <section id="codePanel" class="settings-grid">
             <div class="box">
               <div class="box-head">
                 <h3>Generated Code</h3>
@@ -2490,7 +2518,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.</textarea>
                 <button id="insertCodePromptButton" class="btn btn-soft" type="button">Ke chat</button>
               </div>
               <p class="note">
-                Generator memakai Hermes -> Gemini dan menghasilkan kode sesuai bahasa yang dipilih.
+                Passeo Code Forge menghasilkan kode sesuai bahasa yang dipilih.
               </p>
             </div>
 
@@ -2503,23 +2531,6 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.</textarea>
                 </div>
               </div>
               <pre id="generatedCode" class="codebox code-output"></pre>
-            </div>
-          </section>
-
-          <section id="setupPanel" class="settings-grid" hidden>
-            <div class="box">
-              <div class="box-head">
-                <h3>GitHub Pages</h3>
-                <button class="btn btn-soft copy-button" type="button" data-copy="githubSnippet">Copy</button>
-              </div>
-              <pre id="githubSnippet" class="codebox"></pre>
-            </div>
-            <div class="box">
-              <div class="box-head">
-                <h3>Hermes Gemini curl</h3>
-                <button class="btn btn-soft copy-button" type="button" data-copy="geminiSnippet">Copy</button>
-              </div>
-              <pre id="geminiSnippet" class="codebox"></pre>
             </div>
           </section>
         </aside>
@@ -2643,6 +2654,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           hermes: { state: "idle", label: "Belum diuji" }
         },
         drawerOpen: false,
+        codeDrawerOpen: false,
         passwordDialogOpen: false,
         passwordDialogTargetTab: "connection",
         sidebarOpen: false,
@@ -2767,7 +2779,22 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
 
       function openSettingsDrawer(tab = "connection") {
         state.drawerOpen = true;
+        state.codeDrawerOpen = false;
         state.activeDrawerTab = tab;
+        render();
+      }
+
+      function openCodeDrawer() {
+        state.codeDrawerOpen = true;
+        state.drawerOpen = false;
+        state.passwordDialogOpen = false;
+        render();
+        requestAnimationFrame(() => $("codePrompt")?.focus());
+      }
+
+      function closeCodeDrawer() {
+        readCodeForm();
+        state.codeDrawerOpen = false;
         render();
       }
 
@@ -2782,6 +2809,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         state.passwordDialogTargetTab = tab;
         state.passwordDialogOpen = true;
         state.drawerOpen = false;
+        state.codeDrawerOpen = false;
         render();
         requestAnimationFrame(() => $("settingsPasswordPrompt")?.focus());
         if (options.message) showToast(options.message);
@@ -3060,14 +3088,13 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         $("endpointMeta").textContent = activeEndpointLabel();
         $("modeMeta").textContent = "Secure chat";
         $("drawerBackdrop").hidden = !state.drawerOpen;
+        $("codeBackdrop").hidden = !state.codeDrawerOpen;
         $("passwordBackdrop").hidden = !state.passwordDialogOpen;
         $("sidebar").classList.toggle("open", state.sidebarOpen);
         $("sidebarScreen").classList.toggle("open", state.sidebarOpen);
         $("connectionPanel").hidden = state.activeDrawerTab !== "connection";
-        $("codePanel").hidden = state.activeDrawerTab !== "code";
         $("setupPanel").hidden = state.activeDrawerTab !== "setup";
         $("connectionTab").classList.toggle("active", state.activeDrawerTab === "connection");
-        $("codeTab").classList.toggle("active", state.activeDrawerTab === "code");
         $("setupTab").classList.toggle("active", state.activeDrawerTab === "setup");
         $("sendButton").textContent = state.sending ? "X" : ">";
         $("sendButton").setAttribute("aria-label", state.sending ? "Stop" : "Kirim");
@@ -3162,8 +3189,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           return;
         }
         if (!state.settings.geminiKey) {
-          requestSettingsAccess("connection", { message: "Gemini API key belum diisi." });
-          showToast("Gemini API key belum diisi.");
+          showToast("API key belum diisi. Buka Set untuk mengisi API key.");
           return;
         }
 
@@ -3224,7 +3250,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         readCodeForm();
         const language = codeLanguageMeta();
         $("messageInput").value = `Buatkan kode ${language.label} untuk: ${state.codePrompt || ""}`.trim();
-        state.drawerOpen = false;
+        state.codeDrawerOpen = false;
         render();
         resizeInput();
         $("messageInput").focus();
@@ -3835,7 +3861,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           requestSettingsAccess("connection", { forcePrompt: true, message: "Masukkan password Set." });
         });
         $("codeButton").addEventListener("click", () => {
-          openSettingsDrawer("code");
+          openCodeDrawer();
         });
         $("testButton").addEventListener("click", testActiveProvider);
         $("closeDrawerButton").addEventListener("click", () => {
@@ -3849,6 +3875,10 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
             readSettingsFromForm();
             render();
           }
+        });
+        $("closeCodeDrawerButton").addEventListener("click", closeCodeDrawer);
+        $("codeBackdrop").addEventListener("click", (event) => {
+          if (event.target === $("codeBackdrop")) closeCodeDrawer();
         });
         $("passwordConfirmButton").addEventListener("click", unlockSettings);
         $("passwordCancelButton").addEventListener("click", closePasswordDialog);
@@ -3903,10 +3933,6 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           state.activeDrawerTab = "connection";
           render();
         });
-        $("codeTab").addEventListener("click", () => {
-          state.activeDrawerTab = "code";
-          render();
-        });
         $("setupTab").addEventListener("click", () => {
           state.activeDrawerTab = "setup";
           render();
@@ -3955,7 +3981,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         const hash = location.hash.replace("#", "");
         if (hash === "settings" || hash === "setup" || hash === "code") {
           const tab = hash === "setup" ? "setup" : hash === "code" ? "code" : "connection";
-          if (tab === "code") openSettingsDrawer("code");
+          if (tab === "code") openCodeDrawer();
           else requestSettingsAccess(tab, { forcePrompt: true });
         }
       }
