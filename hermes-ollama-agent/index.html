@@ -2054,6 +2054,7 @@
 
       .bubble-role {
         color: #cbd5e1;
+        text-transform: none;
       }
 
       .bubble-time {
@@ -2121,6 +2122,54 @@
         z-index: 40;
         background: rgba(0, 0, 0, 0.58);
         backdrop-filter: blur(5px);
+      }
+
+      .password-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 55;
+        display: grid;
+        place-items: center;
+        padding: 18px;
+        background: rgba(0, 0, 0, 0.68);
+        backdrop-filter: blur(8px);
+      }
+
+      .password-backdrop[hidden] {
+        display: none;
+      }
+
+      .password-dialog {
+        width: min(420px, 100%);
+        display: grid;
+        gap: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.13);
+        border-radius: 8px;
+        background:
+          linear-gradient(145deg, rgba(20, 184, 166, 0.16), transparent 42%),
+          #10141c;
+        color: #f8fafc;
+        padding: 18px;
+        box-shadow: 0 26px 90px rgba(0, 0, 0, 0.58);
+      }
+
+      .password-dialog h2 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 900;
+      }
+
+      .password-dialog p {
+        margin: 5px 0 0;
+        color: #aeb7c6;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .password-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
       }
 
       .drawer {
@@ -2246,7 +2295,7 @@
               <strong style="font-size:12px;color:var(--muted);text-transform:uppercase">Koneksi</strong>
               <span id="statusPill" class="pill"><span class="dot"></span><span>Belum diuji</span></span>
             </div>
-            <button id="settingsButton" class="btn btn-soft" type="button">Pengaturan</button>
+            <button id="settingsButton" class="btn btn-soft" type="button">Set</button>
           </div>
           <div style="display:flex;gap:8px">
             <button id="downloadButton" class="btn btn-soft btn-icon" type="button" title="Ekspor chat" aria-label="Ekspor chat">DL</button>
@@ -2282,8 +2331,8 @@
             <small id="opsRuntimeMeta">Hermes standby</small>
           </div>
           <div class="ops-card">
-            <span class="ops-label">Model</span>
-            <strong id="opsModel" class="ops-value">Auto</strong>
+            <span class="ops-label">Agent</span>
+            <strong id="opsModel" class="ops-value">Passeo-ai-Agent</strong>
             <div class="meter" aria-hidden="true"><span id="opsModelMeter" class="meter-fill"></span></div>
           </div>
           <div class="ops-card">
@@ -2340,16 +2389,11 @@
                 <h3>Security Gate</h3>
                 <span id="securityPill" class="pill"><span class="dot"></span><span>Locked</span></span>
               </div>
-              <label>
-                <span>Password</span>
-                <input id="settingsPassword" class="field" type="password" autocomplete="current-password" placeholder="Masukkan password settings" />
-              </label>
               <div class="auth-actions">
-                <button id="unlockSettingsButton" class="btn btn-primary" type="button">Unlock</button>
                 <button id="lockSettingsButton" class="btn btn-soft" type="button" hidden>Lock</button>
               </div>
               <p id="securityNote" class="note">
-                API key, uji koneksi, dan system prompt dikunci sampai password benar.
+                Klik tombol Set dan masukkan password untuk membuka API key, uji koneksi, dan system prompt.
               </p>
             </div>
 
@@ -2363,13 +2407,13 @@
                 <input id="geminiKey" class="field" type="password" autocomplete="off" placeholder="Paste Gemini API key" />
               </label>
               <label>
-                <span>Model</span>
+                <span>Engine profile</span>
                 <select id="geminiModel" class="field">
-                  <option value="auto">Auto fallback (recommended)</option>
-                  <option value="gemini-3.5-flash">gemini-3.5-flash</option>
-                  <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite</option>
-                  <option value="gemini-2.5-flash">gemini-2.5-flash</option>
-                  <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite</option>
+                  <option value="auto">Passeo auto (recommended)</option>
+                  <option value="gemini-3.5-flash">Passeo flash max</option>
+                  <option value="gemini-3.1-flash-lite">Passeo flash lite</option>
+                  <option value="gemini-2.5-flash">Passeo stable flash</option>
+                  <option value="gemini-2.5-flash-lite">Passeo stable lite</option>
                 </select>
               </label>
               <label>
@@ -2481,6 +2525,23 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.</textarea>
         </aside>
       </div>
 
+      <div id="passwordBackdrop" class="password-backdrop" hidden>
+        <section class="password-dialog" role="dialog" aria-modal="true" aria-labelledby="passwordTitle">
+          <div>
+            <h2 id="passwordTitle">Password Set</h2>
+            <p>Masukkan password untuk membuka pengaturan sensitif.</p>
+          </div>
+          <label>
+            <span>Password</span>
+            <input id="settingsPasswordPrompt" class="field" type="password" autocomplete="current-password" placeholder="Password settings" />
+          </label>
+          <div class="password-actions">
+            <button id="passwordCancelButton" class="btn btn-soft" type="button">Batal</button>
+            <button id="passwordConfirmButton" class="btn btn-primary" type="button">Buka Set</button>
+          </div>
+        </section>
+      </div>
+
       <div id="toast" class="toast" hidden></div>
     </div>
 
@@ -2550,7 +2611,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         {
           title: "Cek koneksi",
           text: "Kirim pesan singkat untuk memastikan provider aktif dan jawab hanya dengan status singkat.",
-          body: "Cek koneksi provider AI yang aktif. Jawab singkat: provider, model, dan status."
+          body: "Cek koneksi agent AI yang aktif. Jawab singkat: nama agent dan status."
         },
         {
           title: "Buat rencana",
@@ -2582,6 +2643,8 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           hermes: { state: "idle", label: "Belum diuji" }
         },
         drawerOpen: false,
+        passwordDialogOpen: false,
+        passwordDialogTargetTab: "connection",
         sidebarOpen: false,
         activeDrawerTab: "connection",
         settingsUnlocked: false,
@@ -2702,18 +2765,36 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         }
       }
 
-      function requireSettingsUnlock(message = "Masukkan password settings dulu.") {
-        if (state.settingsUnlocked) return true;
+      function openSettingsDrawer(tab = "connection") {
         state.drawerOpen = true;
-        state.activeDrawerTab = "connection";
+        state.activeDrawerTab = tab;
         render();
-        requestAnimationFrame(() => $("settingsPassword")?.focus());
-        showToast(message);
+      }
+
+      function requestSettingsAccess(tab = "connection", options = {}) {
+        const forcePrompt = Boolean(options.forcePrompt);
+        if (state.settingsUnlocked && !forcePrompt) {
+          openSettingsDrawer(tab);
+          return true;
+        }
+        if (forcePrompt) setSettingsUnlocked(false);
+
+        state.passwordDialogTargetTab = tab;
+        state.passwordDialogOpen = true;
+        state.drawerOpen = false;
+        render();
+        requestAnimationFrame(() => $("settingsPasswordPrompt")?.focus());
+        if (options.message) showToast(options.message);
         return false;
       }
 
+      function requireSettingsUnlock(message = "Masukkan password settings dulu.") {
+        if (state.settingsUnlocked) return true;
+        return requestSettingsAccess("connection", { message });
+      }
+
       async function unlockSettings() {
-        const input = $("settingsPassword");
+        const input = $("settingsPasswordPrompt");
         const password = input.value;
         if (!password) {
           showToast("Password belum diisi.");
@@ -2731,11 +2812,21 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           }
           setSettingsUnlocked(true);
           input.value = "";
+          state.passwordDialogOpen = false;
+          state.drawerOpen = true;
+          state.activeDrawerTab = state.passwordDialogTargetTab || "connection";
           render();
           showToast("Settings terbuka.");
         } catch (error) {
           showToast(error.message);
         }
+      }
+
+      function closePasswordDialog() {
+        const input = $("settingsPasswordPrompt");
+        if (input) input.value = "";
+        state.passwordDialogOpen = false;
+        render();
       }
 
       function lockSettings() {
@@ -2779,8 +2870,13 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       }
 
       function activeEndpointLabel() {
-        const model = state.settings.geminiModel === "auto" ? GEMINI_FALLBACK_MODELS[0] : state.settings.geminiModel;
-        return joinUrl(state.settings.geminiEndpoint, `/models/${model}:generateContent`);
+        return APP_NAME;
+      }
+
+      function sanitizeVisibleModelText(value) {
+        return String(value || "")
+          .replace(/models\/gemini-[\w.-]+/gi, `models/${APP_NAME}`)
+          .replace(/gemini-[\w.-]+/gi, APP_NAME);
       }
 
       function statusDotClass(status) {
@@ -2840,13 +2936,13 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
             <div>
               <h2>Apa yang ingin kamu kerjakan?</h2>
               <p>
-                Mode aktif: Hermes. Engine tersambung langsung ke Gemini API dengan fallback model otomatis saat traffic sedang padat.
+                Mode aktif: Passeo-ai-Agent. Engine siap menjawab chat tanpa menampilkan nama model teknis di ruang percakapan.
               </p>
             </div>
             <div class="stack-strip" aria-label="Runtime stack">
               <span>Client UI</span>
               <span>Hermes Router</span>
-              <span>Gemini Engine</span>
+              <span>AI Engine</span>
               <span>Local Memory</span>
             </div>
             <div class="prompt-grid">
@@ -2904,7 +3000,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       }
 
       function selectedModelLabel() {
-        return state.settings.geminiModel === "auto" ? "Auto fallback" : state.settings.geminiModel;
+        return APP_NAME;
       }
 
       function sessionStats() {
@@ -2922,12 +3018,10 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         const locked = !unlocked;
         const status = unlocked ? { state: "ok", label: "Unlocked" } : { state: "checking", label: "Locked" };
         $("securityPill").innerHTML = `<span class="${statusDotClass(status)}"></span><span>${status.label}</span>`;
-        $("settingsPassword").disabled = unlocked;
-        $("unlockSettingsButton").hidden = unlocked;
         $("lockSettingsButton").hidden = locked;
         $("securityNote").textContent = unlocked
           ? "API key, uji koneksi, model, endpoint, dan system prompt bisa diedit."
-          : "API key, uji koneksi, dan system prompt dikunci sampai password benar.";
+          : "Klik tombol Set dan masukkan password untuk membuka API key, uji koneksi, dan system prompt.";
 
         ["geminiKey", "geminiModel", "geminiEndpoint", "systemPrompt", "testHermesButton", "saveSettingsButton"].forEach((id) => {
           const element = $(id);
@@ -2947,7 +3041,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         $("sidebarMessageCount").textContent = stats.messageCount;
         $("opsRuntime").textContent = runtime;
         $("opsRuntimeMeta").textContent = runtimeMeta;
-        $("opsModel").textContent = state.lastModel || selectedModelLabel();
+        $("opsModel").textContent = selectedModelLabel();
         $("opsModelMeter").style.width = `${modelHealth}%`;
         $("opsMemory").textContent = `${stats.chatCount}/40`;
         $("opsMemoryMeta").textContent = `${stats.activeMessages} pesan aktif`;
@@ -2964,8 +3058,9 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         renderStatusPill($("statusPill"), state.settings.provider);
         renderStatusPill($("hermesStatus"), "hermes");
         $("endpointMeta").textContent = activeEndpointLabel();
-        $("modeMeta").textContent = "Hermes -> Gemini";
+        $("modeMeta").textContent = "Secure chat";
         $("drawerBackdrop").hidden = !state.drawerOpen;
+        $("passwordBackdrop").hidden = !state.passwordDialogOpen;
         $("sidebar").classList.toggle("open", state.sidebarOpen);
         $("sidebarScreen").classList.toggle("open", state.sidebarOpen);
         $("connectionPanel").hidden = state.activeDrawerTab !== "connection";
@@ -3067,9 +3162,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           return;
         }
         if (!state.settings.geminiKey) {
-          state.drawerOpen = true;
-          state.activeDrawerTab = "connection";
-          render();
+          requestSettingsAccess("connection", { message: "Gemini API key belum diisi." });
           showToast("Gemini API key belum diisi.");
           return;
         }
@@ -3243,7 +3336,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           attempted.push(model);
           assistantMessage.label = APP_NAME;
           assistantMessage.content = attempted.length > 1
-            ? "Model sebelumnya sedang sibuk. Mencoba fallback..."
+            ? "Engine sebelumnya sedang sibuk. Mencoba fallback..."
             : "";
           render();
           scrollChat();
@@ -3258,9 +3351,9 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           if (response.ok) {
             const json = await response.json();
             assistantMessage.content = extractGeminiText(json);
-            assistantMessage.model = model;
+            assistantMessage.model = APP_NAME;
             state.lastLatency = Math.round(performance.now() - startedAt);
-            state.lastModel = model;
+            state.lastModel = APP_NAME;
             setStatus("hermes", "ok", `Online: ${APP_NAME}`);
             return;
           }
@@ -3273,8 +3366,8 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
 
         const message = lastError?.message || `${APP_NAME} request gagal.`;
         throw new Error(
-          `${message}\n\nModel yang dicoba: ${attempted.join(", ")}\n\n` +
-            "Jika ini 503/UNAVAILABLE, penyebabnya engine sedang overload. App sudah mencoba fallback; tunggu sebentar atau pilih model lain di Pengaturan."
+          `${message}\n\nFallback engine sudah dicoba otomatis.\n\n` +
+            "Jika ini 503/UNAVAILABLE, penyebabnya engine sedang overload. Tunggu sebentar lalu coba lagi."
         );
       }
 
@@ -3294,16 +3387,17 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         } catch {
           detail = await response.text();
         }
+        detail = sanitizeVisibleModelText(detail);
         const status = response.status;
         const prefix = `${provider} error ${status}`;
         if (["Gemini", "Hermes"].includes(provider) && status === 503) {
-          return { status, message: `${prefix}: Model sedang overload atau high demand sementara.` };
+          return { status, message: `${prefix}: Engine sedang overload atau high demand sementara.` };
         }
         if (["Gemini", "Hermes"].includes(provider) && status === 429) {
-          return { status, message: `${prefix}: Rate limit tercapai. Tunggu sebentar atau pakai model fallback.` };
+          return { status, message: `${prefix}: Rate limit tercapai. Tunggu sebentar atau pakai fallback engine.` };
         }
         if (["Gemini", "Hermes"].includes(provider) && [400, 401, 403].includes(status)) {
-          return { status, message: `${prefix}: Credential/API key atau akses model tidak valid. Detail: ${detail}` };
+          return { status, message: `${prefix}: Credential/API key atau akses engine tidak valid. Detail: ${detail}` };
         }
         return { status, message: `${prefix}: ${detail || response.statusText}` };
       }
@@ -3376,8 +3470,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         if (!requireSettingsUnlock("Masukkan password untuk uji koneksi.")) return;
         readSettingsFromForm();
         if (!state.settings.geminiKey) {
-          state.drawerOpen = true;
-          render();
+          openSettingsDrawer("connection");
           showToast("Paste Gemini API key dulu.");
           return;
         }
@@ -3736,17 +3829,13 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         $("deleteButton").addEventListener("click", deleteConversation);
         $("downloadButton").addEventListener("click", exportTranscript);
         $("settingsButton").addEventListener("click", () => {
-          state.drawerOpen = true;
-          render();
+          requestSettingsAccess("connection", { forcePrompt: true, message: "Masukkan password Set." });
         });
         $("settingsButtonTop").addEventListener("click", () => {
-          state.drawerOpen = true;
-          render();
+          requestSettingsAccess("connection", { forcePrompt: true, message: "Masukkan password Set." });
         });
         $("codeButton").addEventListener("click", () => {
-          state.drawerOpen = true;
-          state.activeDrawerTab = "code";
-          render();
+          openSettingsDrawer("code");
         });
         $("testButton").addEventListener("click", testActiveProvider);
         $("closeDrawerButton").addEventListener("click", () => {
@@ -3760,6 +3849,15 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
             readSettingsFromForm();
             render();
           }
+        });
+        $("passwordConfirmButton").addEventListener("click", unlockSettings);
+        $("passwordCancelButton").addEventListener("click", closePasswordDialog);
+        $("passwordBackdrop").addEventListener("click", (event) => {
+          if (event.target === $("passwordBackdrop")) closePasswordDialog();
+        });
+        $("settingsPasswordPrompt").addEventListener("keydown", (event) => {
+          if (event.key === "Enter") unlockSettings();
+          if (event.key === "Escape") closePasswordDialog();
         });
         $("mobileMenuButton").addEventListener("click", () => {
           state.sidebarOpen = true;
@@ -3821,14 +3919,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
             render();
           });
         });
-        $("unlockSettingsButton").addEventListener("click", unlockSettings);
         $("lockSettingsButton").addEventListener("click", lockSettings);
-        $("settingsPassword").addEventListener("keydown", (event) => {
-          if (event.key === "Enter") {
-            event.preventDefault();
-            unlockSettings();
-          }
-        });
         $("testHermesButton").addEventListener("click", testHermes);
         $("saveSettingsButton").addEventListener("click", () => {
           if (!requireSettingsUnlock("Masukkan password untuk menyimpan settings.")) return;
@@ -3848,7 +3939,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         $("insertCodePromptButton").addEventListener("click", insertCodePromptToChat);
         document.querySelectorAll("input, select, textarea").forEach((element) => {
           element.addEventListener("change", () => {
-            if (element.id === "settingsPassword") return;
+            if (element.id === "settingsPasswordPrompt") return;
             if (element.closest(".sensitive-box") && !state.settingsUnlocked) return;
             readSettingsFromForm();
             render();
@@ -3863,9 +3954,9 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       function applyHash() {
         const hash = location.hash.replace("#", "");
         if (hash === "settings" || hash === "setup" || hash === "code") {
-          state.drawerOpen = true;
-          state.activeDrawerTab = hash === "setup" ? "setup" : hash === "code" ? "code" : "connection";
-          render();
+          const tab = hash === "setup" ? "setup" : hash === "code" ? "code" : "connection";
+          if (tab === "code") openSettingsDrawer("code");
+          else requestSettingsAccess(tab, { forcePrompt: true });
         }
       }
 
