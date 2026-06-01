@@ -2689,23 +2689,34 @@
         html,
         body,
         #app {
-          height: var(--app-height, 100svh);
-          min-height: var(--app-height, 100svh);
+          height: var(--app-height, 100dvh);
+          min-height: var(--app-height, 100dvh);
           overflow: hidden;
         }
 
         .shell,
         .main {
-          height: var(--app-height, 100svh);
-          min-height: var(--app-height, 100svh);
+          height: var(--app-height, 100dvh);
+          min-height: var(--app-height, 100dvh);
+        }
+
+        .main {
+          grid-template-rows: auto minmax(0, 1fr);
         }
 
         .composer-wrap {
-          padding: 10px 12px calc(18px + env(safe-area-inset-bottom) + var(--composer-lift, 56px));
+          position: fixed;
+          left: 0;
+          right: 0;
+          bottom: var(--keyboard-bottom, 0px);
+          z-index: 40;
+          padding: 10px 12px calc(14px + env(safe-area-inset-bottom) + var(--composer-safe-bottom, 56px));
+          transform: translateZ(0);
+          will-change: bottom;
         }
 
         .chat-scroll {
-          padding-bottom: 12px;
+          padding-bottom: var(--composer-space, 148px);
         }
       }
 
@@ -4814,13 +4825,16 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
 
       function syncViewportMetrics() {
         const viewport = window.visualViewport;
-        const fallbackHeight = window.innerHeight || document.documentElement.clientHeight || 720;
-        const visibleHeight = Math.max(320, Math.round(viewport?.height || fallbackHeight));
-        const layoutHeight = window.innerHeight || visibleHeight;
-        const coveredBottom = viewport ? Math.max(0, layoutHeight - viewport.height - viewport.offsetTop) : 0;
-        const lift = Math.max(56, Math.min(112, Math.round(coveredBottom + 18)));
-        document.documentElement.style.setProperty("--app-height", `${visibleHeight}px`);
-        document.documentElement.style.setProperty("--composer-lift", `${lift}px`);
+        const layoutHeight = Math.max(320, Math.round(window.innerHeight || document.documentElement.clientHeight || 720));
+        const visualBottom = viewport ? viewport.offsetTop + viewport.height : layoutHeight;
+        const keyboardBottom = Math.max(0, Math.round(layoutHeight - visualBottom));
+        const keyboardOpen = keyboardBottom > 48;
+        const safeBottom = keyboardOpen ? 10 : 56;
+        const composerSpace = keyboardOpen ? 102 : 148;
+        document.documentElement.style.setProperty("--app-height", `${layoutHeight}px`);
+        document.documentElement.style.setProperty("--keyboard-bottom", `${keyboardBottom}px`);
+        document.documentElement.style.setProperty("--composer-safe-bottom", `${safeBottom}px`);
+        document.documentElement.style.setProperty("--composer-space", `${composerSpace}px`);
       }
 
       function initVoxelCanvasWorld() {
@@ -5235,6 +5249,14 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           sendMessage();
         });
         $("messageInput").addEventListener("input", resizeInput);
+        $("messageInput").addEventListener("focus", () => {
+          syncViewportMetrics();
+          setTimeout(syncViewportMetrics, 80);
+          setTimeout(scrollChat, 120);
+        });
+        $("messageInput").addEventListener("blur", () => {
+          setTimeout(syncViewportMetrics, 120);
+        });
         $("messageInput").addEventListener("keydown", (event) => {
           if (event.key === "Enter" && !event.shiftKey) {
             event.preventDefault();
