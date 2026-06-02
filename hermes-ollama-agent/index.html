@@ -2967,6 +2967,13 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.</textarea>
               </div>
               <pre id="hermesSnippet" class="codebox"></pre>
             </div>
+            <div class="box">
+              <div class="box-head">
+                <h3>Google Colab model host</h3>
+                <button class="btn btn-soft copy-button" type="button" data-copy="colabSnippet">Copy</button>
+              </div>
+              <pre id="colabSnippet" class="codebox"></pre>
+            </div>
           </section>
         </aside>
       </div>
@@ -4338,6 +4345,15 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           `curl "${joinUrl(state.settings.hermesEndpoint, "/api/chat")}" \\`,
           "  -H 'Content-Type: application/json' \\",
           `  -d '{"model":"${state.settings.hermesModel}","stream":false,"messages":[{"role":"user","content":"Halo Hermes"}],"options":{"num_ctx":512,"num_predict":32,"num_thread":2}}'`
+        ].join("\n");
+
+        $("colabSnippet").textContent = [
+          "# Google Colab Hermes 7B:",
+          "1. Buka https://colab.research.google.com/github/izrai4103-lgtm/ai-agent-chat/blob/main/colab/passeo-hermes-7b-colab.ipynb",
+          "2. Runtime > Change runtime type > pilih GPU jika tersedia.",
+          "3. Run all. Notebook akan install Ollama, pull nous-hermes:7b, dan start tunnel HTTPS.",
+          "4. Copy URL https://...trycloudflare.com dari output notebook.",
+          "5. Klik Set di app ini, masukkan password, paste URL itu ke Server model endpoint, lalu Uji server 7B."
         ].join("\n");
       }
 

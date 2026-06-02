@@ -1,6 +1,6 @@
 {
   "title": "Passeo-ai-Agent",
-  "description": "A GitHub Pages-ready Hermes browser chat powered by Gemini.",
+  "description": "A hosted Hermes 7B browser chat agent with Google Colab model hosting support.",
   "category": "Productivity",
   "icon": "icon.svg"
 }
