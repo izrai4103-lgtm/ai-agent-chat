@@ -1,6 +1,6 @@
 {
   "title": "Passeo-ai-Agent",
-  "description": "A hosted Hermes 7B browser chat agent with Google Colab model hosting support.",
+  "description": "An external hosted AI chat agent with a free no-key model endpoint and optional Colab/VPS model hosting.",
   "category": "Productivity",
   "icon": "icon.svg"
 }
