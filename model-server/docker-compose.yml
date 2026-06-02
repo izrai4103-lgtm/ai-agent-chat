@@ -1,0 +1,33 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    environment:
+      OLLAMA_CONTEXT_LENGTH: "512"
+      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_MAX_LOADED_MODELS: "1"
+      OLLAMA_KEEP_ALIVE: "10m"
+    volumes:
+      - ollama-models:/root/.ollama
+    expose:
+      - "11434"
+
+  gateway:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      - ollama
+    environment:
+      PORT: "8080"
+      HERMES_MODEL: "nous-hermes:7b"
+      HERMES_UPSTREAM_URL: "http://ollama:11434"
+      HERMES_UPSTREAM_MODE: "ollama"
+      HERMES_NUM_CTX: "512"
+      HERMES_NUM_THREAD: "2"
+      HERMES_NUM_PREDICT: "256"
+      CORS_ORIGINS: "https://izrai4103-lgtm.github.io,http://localhost:*,http://127.0.0.1:*"
+    ports:
+      - "8080:8080"
+
+volumes:
+  ollama-models:

@@ -6,7 +6,7 @@
     <title>Passeo-ai-Agent</title>
     <meta
       name="description"
-      content="GitHub Pages-ready Hermes local 7B AI chat agent."
+      content="GitHub Pages-ready hosted Hermes 7B AI chat agent."
     />
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
     <style>
@@ -2791,7 +2791,7 @@
           <div style="display:flex;gap:8px">
             <button id="downloadButton" class="btn btn-soft btn-icon" type="button" title="Ekspor chat" aria-label="Ekspor chat">DL</button>
             <button id="deleteButton" class="btn btn-soft btn-icon" type="button" title="Hapus chat" aria-label="Hapus chat">×</button>
-            <a class="btn btn-soft btn-icon" href="https://ollama.com/library/nous-hermes/tags" target="_blank" rel="noreferrer" title="Hermes local 7B model" aria-label="Hermes local 7B model">?</a>
+            <a class="btn btn-soft btn-icon" href="https://ollama.com/library/nous-hermes/tags" target="_blank" rel="noreferrer" title="Hosted Hermes 7B model" aria-label="Hosted Hermes 7B model">?</a>
           </div>
         </footer>
       </aside>
@@ -2884,30 +2884,30 @@
                 <button id="lockSettingsButton" class="btn btn-soft" type="button" hidden>Lock</button>
               </div>
               <p id="securityNote" class="note">
-                Klik tombol Set dan masukkan password untuk membuka endpoint Hermes local 7B, uji koneksi, dan system prompt.
+                Klik tombol Set dan masukkan password untuk membuka endpoint server Hermes 7B, uji koneksi, dan system prompt.
               </p>
             </div>
 
             <div id="providerBox" class="box sensitive-box">
               <div class="box-head">
-                <h3>Hermes Local 7B Engine</h3>
+                <h3>Hermes Hosted 7B Engine</h3>
                 <span id="hermesStatus" class="pill"><span class="dot"></span><span>Belum diuji</span></span>
               </div>
               <label>
-                <span>Model local 7B ±4GB</span>
+                <span>Model hosted 7B ±4GB</span>
                 <select id="hermesModel" class="field">
-                  <option value="nous-hermes:7b">nous-hermes:7b · local 7B · 3.8GB</option>
+                  <option value="nous-hermes:7b">nous-hermes:7b · hosted 7B · 3.8GB</option>
                 </select>
               </label>
               <label>
-                <span>Ollama local endpoint</span>
-                <input id="hermesEndpoint" class="field" value="http://localhost:11434" />
+                <span>Server model endpoint</span>
+                <input id="hermesEndpoint" class="field" value="https://your-hermes-7b-server.example.com" />
               </label>
               <p class="note">
-                Model dikunci ke Hermes local 7B sekitar 4GB. Jalankan Ollama di perangkat yang sama, lalu endpoint ini akan memakai /api/chat.
+                Model dikunci ke Hermes 7B sekitar 4GB. Jalankan model di server luar dengan HTTPS, lalu endpoint ini akan memakai /api/chat.
               </p>
               <div style="display:grid;grid-template-columns:1fr auto;gap:8px">
-                <button id="testHermesButton" class="btn btn-primary" type="button">Uji local 7B</button>
+                <button id="testHermesButton" class="btn btn-primary" type="button">Uji server 7B</button>
                 <button id="saveSettingsButton" class="btn btn-soft" type="button" title="Simpan" aria-label="Simpan">OK</button>
               </div>
             </div>
@@ -2962,7 +2962,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.</textarea>
             </div>
             <div class="box">
               <div class="box-head">
-                <h3>Hermes local 7B curl</h3>
+                <h3>Hermes hosted 7B curl</h3>
                 <button class="btn btn-soft copy-button" type="button" data-copy="hermesSnippet">Copy</button>
               </div>
               <pre id="hermesSnippet" class="codebox"></pre>
@@ -3100,10 +3100,16 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.</textarea>
       const VECTOR_DB_VERSION = 1;
       const VECTOR_STORE = "records";
       const VECTOR_DIMENSIONS = 64;
-      const MAX_HERMES_ATTEMPTS_PER_MESSAGE = 2;
-      const HERMES_CONTEXT_MESSAGE_LIMIT = 10;
-      const HERMES_CONTEXT_CHAR_LIMIT = 12000;
-      const HERMES_SYSTEM_PROMPT_CHAR_LIMIT = 6000;
+      const MAX_HERMES_ATTEMPTS_PER_MESSAGE = 1;
+      const HERMES_CONTEXT_MESSAGE_LIMIT = 4;
+      const HERMES_CONTEXT_CHAR_LIMIT = 2200;
+      const HERMES_SYSTEM_PROMPT_CHAR_LIMIT = 1800;
+      const HERMES_HOSTED_NUM_CTX = 512;
+      const HERMES_HOSTED_NUM_THREAD = 2;
+      const HERMES_HOSTED_MAX_OUTPUT_TOKENS = 256;
+      const HERMES_HOSTED_CODE_MAX_OUTPUT_TOKENS = 768;
+      const HERMES_OPENAI_MAX_OUTPUT_TOKENS = 2048;
+      const HERMES_HOSTED_TEST_TOKENS = 8;
       const EXPLANATION_REQUEST_PATTERN =
         /\b(jelaskan|jelasin|terangkan|uraikan|rincikan|analisis|analisa|bedah|kenapa|mengapa|kok|alasan|sebab|penyebab|explain|why|reason|analyze|analyse|break down|how come)\b/i;
       const GET_TIME_REQUEST_PATTERN =
@@ -3140,7 +3146,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
 
       const DEFAULTS = {
         provider: "hermes",
-        hermesEndpoint: "http://localhost:11434",
+        hermesEndpoint: "https://your-hermes-7b-server.example.com",
         hermesModel: "nous-hermes:7b",
         chainOfThoughtForced: true,
         systemPrompt: SYSTEM_PERSONA
@@ -3330,7 +3336,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       }
 
       function hermesModelLabel(model = state.settings.hermesModel) {
-        return "Hermes local 7B (3.8GB)";
+        return "Hermes hosted 7B (3.8GB)";
       }
 
       function activeConversation() {
@@ -3831,15 +3837,15 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       }
 
       function activeEndpointLabel() {
-        return "Hermes local 7B";
+        return "Hermes hosted 7B";
       }
 
       function sanitizeVisibleModelText(value) {
         const legacyOpenModel = ["Open", "Hermes"].join("");
         return String(value || "")
-          .replace(new RegExp(`teknium/${legacyOpenModel}-2\\.5-Mistral-7B`, "gi"), "Hermes local 7B")
-          .replace(/NousResearch\/Nous-Hermes-2-Mistral-7B-DPO/gi, "Hermes local 7B")
-          .replace(new RegExp(`${legacyOpenModel}[^\\n,.;)]*`, "gi"), "Hermes local 7B");
+          .replace(new RegExp(`teknium/${legacyOpenModel}-2\\.5-Mistral-7B`, "gi"), "Hermes hosted 7B")
+          .replace(/NousResearch\/Nous-Hermes-2-Mistral-7B-DPO/gi, "Hermes hosted 7B")
+          .replace(new RegExp(`${legacyOpenModel}[^\\n,.;)]*`, "gi"), "Hermes hosted 7B");
       }
 
       function statusDotClass(status) {
@@ -4238,8 +4244,8 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         $("securityPill").innerHTML = `<span class="${statusDotClass(status)}"></span><span>${status.label}</span>`;
         $("lockSettingsButton").hidden = locked;
         $("securityNote").textContent = unlocked
-          ? "Endpoint Hermes local 7B, uji koneksi, model, chain_of_thought_forced, dan system prompt bisa diedit."
-          : "Klik tombol Set dan masukkan password untuk membuka endpoint Hermes local 7B, uji koneksi, chain_of_thought_forced, dan system prompt.";
+          ? "Endpoint server Hermes 7B, uji koneksi, model, chain_of_thought_forced, dan system prompt bisa diedit."
+          : "Klik tombol Set dan masukkan password untuk membuka endpoint server Hermes 7B, uji koneksi, chain_of_thought_forced, dan system prompt.";
 
         ["hermesModel", "hermesEndpoint", "chainOfThoughtForced", "systemPrompt", "testHermesButton", "saveSettingsButton"].forEach((id) => {
           const element = $(id);
@@ -4325,12 +4331,13 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         ].join("\n");
 
         $("hermesSnippet").textContent = [
-          "# Ollama local Hermes 7B sekitar 4GB:",
-          "ollama pull nous-hermes:7b",
-          "OLLAMA_ORIGINS=\"https://izrai4103-lgtm.github.io,http://localhost:*\" ollama serve",
+          "# Server luar Hermes 7B sekitar 4GB:",
+          "# Jalankan di VPS/RunPod/Fly/Render, bukan di GitHub Pages.",
+          "docker compose -f model-server/docker-compose.yml up -d --build",
+          "docker compose -f model-server/docker-compose.yml exec ollama ollama pull nous-hermes:7b",
           `curl "${joinUrl(state.settings.hermesEndpoint, "/api/chat")}" \\`,
           "  -H 'Content-Type: application/json' \\",
-          `  -d '{"model":"${state.settings.hermesModel}","stream":false,"messages":[{"role":"user","content":"Halo Hermes"}]}'`
+          `  -d '{"model":"${state.settings.hermesModel}","stream":false,"messages":[{"role":"user","content":"Halo Hermes"}],"options":{"num_ctx":512,"num_predict":32,"num_thread":2}}'`
         ].join("\n");
       }
 
@@ -4407,7 +4414,11 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         render();
 
         try {
-          await sendHermes7B(tempConversation, tempMessage, { systemPrompt: CODE_SYSTEM_PROMPT, maxOutputTokens: 4096 });
+          await sendHermes7B(tempConversation, tempMessage, {
+            systemPrompt: CODE_SYSTEM_PROMPT,
+            maxOutputTokens: HERMES_HOSTED_CODE_MAX_OUTPUT_TOKENS,
+            hostedOutputLimit: HERMES_HOSTED_CODE_MAX_OUTPUT_TOKENS
+          });
           state.codeOutput = tempMessage.content || "";
           state.codeLastLanguage = state.codeLanguage;
           showToast("Kode selesai dibuat.");
@@ -4614,9 +4625,9 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       function hermesLocalConnectionMessage(error = null) {
         const detail = error?.message ? ` Detail: ${error.message}` : "";
         return [
-          "Hermes local 7B belum tersambung.",
-          "Pastikan model 4GB sudah ada: ollama pull nous-hermes:7b.",
-          `Pastikan server hidup di ${state.settings.hermesEndpoint || DEFAULTS.hermesEndpoint}: ollama serve.`,
+          "Server Hermes 7B belum tersambung.",
+          "Pastikan model 4GB sudah ada di server luar: ollama pull nous-hermes:7b.",
+          `Pastikan endpoint HTTPS hidup di ${state.settings.hermesEndpoint || DEFAULTS.hermesEndpoint}.`,
           detail
         ].join(" ");
       }
@@ -4625,13 +4636,18 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         const braintPlan = options.braintPlan || buildBraintPlan(conversation, options);
         const finalSystemPrompt = compactText(composeSystemPrompt(systemPrompt, braintPlan), HERMES_SYSTEM_PROMPT_CHAR_LIMIT);
         const messages = buildHermesMessages(conversation, braintPlan);
-        const maxOutputTokens = options.maxOutputTokens || braintPlan?.maxOutputTokens || 2048;
+        const isOpenAiMode = hermesEndpointMode() === "openai";
+        const outputTokenLimit = isOpenAiMode
+          ? HERMES_OPENAI_MAX_OUTPUT_TOKENS
+          : options.hostedOutputLimit || HERMES_HOSTED_MAX_OUTPUT_TOKENS;
+        const requestedMaxOutputTokens = Number(options.maxOutputTokens || braintPlan?.maxOutputTokens || outputTokenLimit);
+        const maxOutputTokens = Math.max(1, Math.min(requestedMaxOutputTokens || outputTokenLimit, outputTokenLimit));
         const temperature = options.temperature || braintPlan?.temperature || 0.7;
         const systemMessage = String(finalSystemPrompt || "").trim()
           ? [{ role: "system", content: String(finalSystemPrompt).trim() }]
           : [];
 
-        if (hermesEndpointMode() === "openai") {
+        if (isOpenAiMode) {
           return {
             model: state.settings.hermesModel,
             messages: [...systemMessage, ...messages],
@@ -4647,7 +4663,9 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           stream: false,
           options: {
             temperature,
-            num_predict: maxOutputTokens
+            num_ctx: HERMES_HOSTED_NUM_CTX,
+            num_predict: maxOutputTokens,
+            num_thread: HERMES_HOSTED_NUM_THREAD
           }
         };
       }
@@ -4682,7 +4700,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           return;
         }
 
-        const apiError = await readApiError(response, "Hermes local 7B");
+        const apiError = await readApiError(response, "Hermes hosted 7B");
         throw new Error(apiError?.message || `${APP_NAME} request gagal.`);
       }
 
@@ -4858,9 +4876,12 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         const tempMessage = { content: "", label: APP_NAME };
         state.abortController = new AbortController();
         try {
-          await sendHermes7B(tempConversation, tempMessage);
+          await sendHermes7B(tempConversation, tempMessage, {
+            maxOutputTokens: HERMES_HOSTED_TEST_TOKENS,
+            hostedOutputLimit: HERMES_HOSTED_TEST_TOKENS
+          });
           setStatus("hermes", "ok", tempMessage.model ? `Online: ${APP_NAME}` : "Online");
-          showToast("Hermes local 7B tersambung.");
+          showToast("Server Hermes 7B tersambung.");
         } catch (error) {
           setStatus("hermes", "bad", "Local off");
           showToast(error.message.slice(0, 180));
