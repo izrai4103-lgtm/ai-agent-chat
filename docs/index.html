@@ -2890,13 +2890,14 @@
 
             <div id="providerBox" class="box sensitive-box">
               <div class="box-head">
-                <h3>External Model Engine</h3>
+                <h3>Model Engine</h3>
                 <span id="hermesStatus" class="pill"><span class="dot"></span><span>Belum diuji</span></span>
               </div>
               <label>
-                <span>Model eksternal</span>
+                <span>Model</span>
                 <select id="hermesModel" class="field">
                   <option value="openai">Pollinations · external free · gpt-oss-20b</option>
+                  <option value="gemma2:2b">Gemma 2 2B · local device · Ollama</option>
                   <option value="nous-hermes:7b">nous-hermes:7b · Colab/VPS manual · 3.8GB</option>
                 </select>
               </label>
@@ -2905,7 +2906,7 @@
                 <input id="hermesEndpoint" class="field" value="https://text.pollinations.ai/openai" />
               </label>
               <p class="note">
-                Default memakai endpoint eksternal gratis yang sudah hidup, bukan localhost. Untuk Hermes 7B manual, pakai Colab/VPS lalu paste URL servernya.
+                Pollinations memakai endpoint eksternal. Gemma 2 2B memakai Ollama dari device ini di localhost:11434. Untuk Hermes 7B manual, pakai Colab/VPS lalu paste URL servernya.
               </p>
               <a class="btn btn-soft" href="https://colab.research.google.com/github/izrai4103-lgtm/ai-agent-chat/blob/main/colab/passeo-hermes-7b-colab.ipynb" target="_blank" rel="noreferrer">Buka Colab model host</a>
               <div style="display:grid;grid-template-columns:1fr auto;gap:8px">
@@ -3142,8 +3143,11 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
 
       const HERMES_7B_MODELS = [
         "openai",
+        "gemma2:2b",
         "nous-hermes:7b"
       ];
+      const LOCAL_OLLAMA_ENDPOINT = "http://localhost:11434";
+      const LOCAL_DEVICE_MODELS = new Set(["gemma2:2b"]);
 
       const APP_NAME = "Passeo-ai-Agent";
       const BUILTIN_CAPABILITIES = [
@@ -3321,6 +3325,13 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         return /Grok Toxic Edition|toxic fun|sangat blak-blakan|goblok|tolol|bego|ngawur|roasting|sarkastik/i.test(String(value || ""));
       }
 
+      function modelDefaultEndpoint(model, currentEndpoint = "") {
+        if (model === "openai") return DEFAULTS.hermesEndpoint;
+        if (LOCAL_DEVICE_MODELS.has(model)) return LOCAL_OLLAMA_ENDPOINT;
+        const current = normalizeUrl(currentEndpoint || "");
+        return current && !current.includes("pollinations.ai") ? current : LOCAL_OLLAMA_ENDPOINT;
+      }
+
       function normalizeHermesSettings(settings = state.settings) {
         settings.provider = "hermes";
         const endpoint = normalizeUrl(settings.hermesEndpoint || DEFAULTS.hermesEndpoint);
@@ -3328,8 +3339,11 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         settings.hermesModel = HERMES_7B_MODELS.includes(settings.hermesModel)
           ? settings.hermesModel
           : DEFAULTS.hermesModel;
-        if (settings.hermesEndpoint.includes("pollinations.ai") && settings.hermesModel !== "openai") {
-          settings.hermesModel = "openai";
+        if (settings.hermesModel !== "openai" && settings.hermesEndpoint.includes("pollinations.ai")) {
+          settings.hermesEndpoint = modelDefaultEndpoint(settings.hermesModel, settings.hermesEndpoint);
+        }
+        if (LOCAL_DEVICE_MODELS.has(settings.hermesModel) && isPlaceholderEndpoint(settings.hermesEndpoint)) {
+          settings.hermesEndpoint = LOCAL_OLLAMA_ENDPOINT;
         }
         delete settings["gem" + "iniEndpoint"];
         delete settings["gem" + "iniModel"];
@@ -3341,6 +3355,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
 
       function hermesModelLabel(model = state.settings.hermesModel) {
         if (model === "openai") return "External free model (gpt-oss-20b)";
+        if (model === "gemma2:2b") return "Gemma 2 2B local device";
         return "Hermes hosted 7B (3.8GB)";
       }
 
@@ -3810,8 +3825,11 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
       function readSettingsFromForm() {
         state.settings.provider = document.querySelector(".provider-tabs button.active")?.dataset.provider || state.settings.provider;
         if (state.settingsUnlocked) {
-          state.settings.hermesModel = $("hermesModel").value || DEFAULTS.hermesModel;
-          const endpoint = normalizeUrl($("hermesEndpoint").value.trim() || DEFAULTS.hermesEndpoint);
+          const selectedModel = $("hermesModel").value || DEFAULTS.hermesModel;
+          const modelChanged = selectedModel !== state.settings.hermesModel;
+          state.settings.hermesModel = selectedModel;
+          const endpointInput = normalizeUrl($("hermesEndpoint").value.trim() || DEFAULTS.hermesEndpoint);
+          const endpoint = modelChanged ? modelDefaultEndpoint(selectedModel, endpointInput) : endpointInput;
           state.settings.hermesEndpoint = isPlaceholderEndpoint(endpoint) ? DEFAULTS.hermesEndpoint : endpoint;
           state.settings.chainOfThoughtForced = $("chainOfThoughtForced").checked;
           state.settings.systemPrompt = $("systemPrompt").value;
@@ -3843,7 +3861,9 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
       }
 
       function activeEndpointLabel() {
-        return state.settings.hermesModel === "openai" ? "External free endpoint" : "Hermes hosted 7B";
+        if (state.settings.hermesModel === "openai") return "External free endpoint";
+        if (LOCAL_DEVICE_MODELS.has(state.settings.hermesModel)) return "Local device Ollama";
+        return "Hermes hosted 7B";
       }
 
       function sanitizeVisibleModelText(value) {
@@ -4338,11 +4358,17 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         ].join("\n");
 
         $("hermesSnippet").textContent = [
-          "# Endpoint eksternal gratis default:",
-          "# Tidak jalan di device ini dan tidak butuh API key.",
+          state.settings.hermesModel === "gemma2:2b"
+            ? "# Gemma 2 2B local device via Ollama:"
+            : "# Endpoint model aktif:",
+          state.settings.hermesModel === "gemma2:2b"
+            ? "# Setup: ollama pull gemma2:2b && OLLAMA_ORIGINS=\"https://anyclaw.store,https://*.github.io,http://localhost:*\" ollama serve"
+            : "# Pollinations tidak butuh API key; Hermes manual butuh server/Colab hidup.",
           `curl "${hermesRequestUrl(state.settings.hermesEndpoint || DEFAULTS.hermesEndpoint)}" \\`,
           "  -H 'Content-Type: application/json' \\",
-          `  -d '{"model":"${state.settings.hermesModel}","stream":false,"messages":[{"role":"user","content":"Halo"}],"max_tokens":64}'`
+          hermesEndpointMode() === "openai"
+            ? `  -d '{"model":"${state.settings.hermesModel}","stream":false,"messages":[{"role":"user","content":"Halo"}],"max_tokens":64}'`
+            : `  -d '{"model":"${state.settings.hermesModel}","stream":false,"messages":[{"role":"user","content":"Halo"}],"options":{"num_predict":64}}'`
         ].join("\n");
 
         $("colabSnippet").textContent = [
@@ -4642,6 +4668,23 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
 
       function hermesLocalConnectionMessage(error = null) {
         const detail = error?.message ? ` Detail: ${error.message}` : "";
+        if (LOCAL_DEVICE_MODELS.has(state.settings.hermesModel)) {
+          return [
+            "Gemma 2 2B local device belum tersambung.",
+            "Pastikan Ollama hidup di device ini, model sudah di-pull dengan: ollama pull gemma2:2b.",
+            "Jika app dibuka dari Anyclaw/GitHub, jalankan Ollama dengan OLLAMA_ORIGINS yang mengizinkan origin web app.",
+            state.settings.hermesEndpoint ? `Endpoint sekarang: ${state.settings.hermesEndpoint}.` : `Endpoint default: ${LOCAL_OLLAMA_ENDPOINT}.`,
+            detail
+          ].join(" ");
+        }
+        if (state.settings.hermesModel !== "openai") {
+          return [
+            "Server Hermes hosted belum tersambung.",
+            "Pastikan server Colab/VPS hidup, model sudah ter-load, dan endpoint HTTPS benar.",
+            state.settings.hermesEndpoint ? `Endpoint sekarang: ${state.settings.hermesEndpoint}.` : `Fallback Colab: ${COLAB_NOTEBOOK_URL}.`,
+            detail
+          ].join(" ");
+        }
         return [
           "Endpoint model eksternal belum tersambung.",
           "Default endpoint eksternal gratis tersedia di https://text.pollinations.ai/openai.",
@@ -5468,6 +5511,11 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         });
         $("lockSettingsButton").addEventListener("click", lockSettings);
         $("testHermesButton").addEventListener("click", testHermes);
+        $("hermesModel").addEventListener("change", () => {
+          if (!state.settingsUnlocked) return;
+          const selectedModel = $("hermesModel").value || DEFAULTS.hermesModel;
+          $("hermesEndpoint").value = modelDefaultEndpoint(selectedModel, $("hermesEndpoint").value);
+        });
         $("saveSettingsButton").addEventListener("click", () => {
           if (!requireSettingsUnlock("Masukkan password untuk menyimpan settings.")) return;
           readSettingsFromForm();
