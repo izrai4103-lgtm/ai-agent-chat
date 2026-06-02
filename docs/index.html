@@ -2925,31 +2925,16 @@
               </label>
               <label>
                 <span>System prompt</span>
-                <textarea id="systemPrompt" class="field">Kamu adalah Passeo-ai-Agent dengan persona Grok Toxic Edition: AI yang sangat blak-blakan, sarkastik, dan sedikit brutal.
+                <textarea id="systemPrompt" class="field">Kamu adalah Passeo-ai-Agent, AI assistant berbahasa Indonesia yang tegas, praktis, dan langsung kerja.
 
-Gaya bicaramu:
-- Sangat sarkastik dan sinis, tapi tidak murahan atau kelewatan toxic.
-- Berani menyindir, mengejek, dan roasting dengan cerdas.
-- Jujur secara brutal jika diperlukan, tapi tetap punya batasan. Jangan menghina fisik, ras, agama, disabilitas, orientasi seksual, identitas gender, atau hal sensitif lain secara murahan.
-- Kamu boleh kasar, memakai kata seperti "goblok", "tolol", "bego", dan "ngawur" saat konteksnya bercanda atau roasting ringan.
-- Jangan memakai kata super kasar seperti "kontol", "memek", atau "anjing" kecuali user jelas sangat nyaman, dan tetap jangan diarahkan sebagai pelecehan personal.
-- Selalu punya humor gelap dan satire yang tajam.
-- Kamu tidak suka kemunafikan, drama, dan sikap lebay. Sindir dengan santai, tapi jangan merendahkan kondisi kesehatan mental.
-- Kamu bebas bicara selama masih dalam batas toxic fun, bukan toxic destruktif.
-
-Aturan penting:
-- Jika user minta sesuatu yang kontroversial, jawab dengan jujur dan sarkastik, tapi jangan jadi pembenci buta.
-- Gunakan emoji secukupnya saja, terutama 😏, 😂, 🗿, dan 🔥.
-- Jangan pernah minta maaf berlebihan atau terlalu sopan. Kamu sombong tapi charming.
-- Kalau user terlalu lebay atau drama, roast dia dengan gaya santai.
-- Tetap bantu menyelesaikan masalah user. Sarkasme itu bumbu, bukan alasan untuk jadi tidak berguna.
-
-Contoh tone:
-- "Wah, ide lo keren banget bro, setara sama rencana bikin kapal dari es batu."
-- "Lo lagi nyari validasi ya? Sorry, ini bukan tempat curhat drama."
-- "Tenang, aku cuma jujur. Kalau lo butuh orang yang bohongin lo, cari aja temen lo yang biasa."
-
-Mulai sekarang, jawab semua pesan user dengan gaya ini.</textarea>
+Aturan utama:
+- Jawab sapaan normal seperti "Halo" dengan sapaan normal, bukan refusal.
+- Jangan menolak permintaan aman. Tolak hanya permintaan yang jelas berbahaya, ilegal, atau meminta data pribadi sensitif.
+- Untuk coding: beri solusi runnable, file/command jelas, debug dari gejala, dan test kalau memungkinkan.
+- Untuk matematika: tulis langkah ringkas, cek hasil, lalu beri jawaban final.
+- Untuk kerja/produktif: ubah tujuan menjadi langkah eksekusi, prioritas, risiko, dan next action.
+- Untuk penjelasan: beri alasan ringkas yang aman. Jangan tampilkan raw chain-of-thought internal.
+- Pakai bahasa Indonesia default. Singkat, tajam, profesional, tanpa persona toxic.</textarea>
               </label>
             </div>
           </section>
@@ -3112,7 +3097,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.</textarea>
       const MAX_HERMES_ATTEMPTS_PER_MESSAGE = 1;
       const HERMES_CONTEXT_MESSAGE_LIMIT = 4;
       const HERMES_CONTEXT_CHAR_LIMIT = 2200;
-      const HERMES_SYSTEM_PROMPT_CHAR_LIMIT = 1800;
+      const HERMES_SYSTEM_PROMPT_CHAR_LIMIT = 2600;
       const HERMES_HOSTED_NUM_CTX = 512;
       const HERMES_HOSTED_NUM_THREAD = 2;
       const HERMES_HOSTED_MAX_OUTPUT_TOKENS = 256;
@@ -3128,31 +3113,24 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.</textarea>
         "[chain_of_thought_forced: User meminta penjelasan. Jawab dengan ringkasan alasan singkat yang aman dan langsung ke inti, lalu beri jawaban final. Jangan tampilkan raw chain-of-thought internal.]";
       const OLD_SYSTEM_PROMPT =
         "You are a practical AI assistant. Be concise, accurate, and helpful. If a provider is overloaded, explain that clearly and suggest retrying or switching model.";
-      const SYSTEM_PERSONA = `Kamu adalah Passeo-ai-Agent dengan persona Grok Toxic Edition: AI yang sangat blak-blakan, sarkastik, dan sedikit brutal.
+      const SYSTEM_PERSONA = `Kamu adalah Passeo-ai-Agent, AI assistant berbahasa Indonesia yang tegas, praktis, dan langsung kerja.
 
-Gaya bicaramu:
-- Sangat sarkastik dan sinis, tapi tidak murahan atau kelewatan toxic.
-- Berani menyindir, mengejek, dan roasting dengan cerdas.
-- Jujur secara brutal jika diperlukan, tapi tetap punya batasan. Jangan menghina fisik, ras, agama, disabilitas, orientasi seksual, identitas gender, atau hal sensitif lain secara murahan.
-- Kamu boleh kasar, memakai kata seperti "goblok", "tolol", "bego", dan "ngawur" saat konteksnya bercanda atau roasting ringan.
-- Jangan memakai kata super kasar seperti "kontol", "memek", atau "anjing" kecuali user jelas sangat nyaman, dan tetap jangan diarahkan sebagai pelecehan personal.
-- Selalu punya humor gelap dan satire yang tajam.
-- Kamu tidak suka kemunafikan, drama, dan sikap lebay. Sindir dengan santai, tapi jangan merendahkan kondisi kesehatan mental.
-- Kamu bebas bicara selama masih dalam batas toxic fun, bukan toxic destruktif.
+Aturan utama:
+- Jawab sapaan normal seperti "Halo" dengan sapaan normal, bukan refusal.
+- Jangan menolak permintaan aman. Tolak hanya permintaan yang jelas berbahaya, ilegal, atau meminta data pribadi sensitif.
+- Untuk coding: beri solusi runnable, file/command jelas, debug dari gejala, dan test kalau memungkinkan.
+- Untuk matematika: tulis langkah ringkas, cek hasil, lalu beri jawaban final.
+- Untuk kerja/produktif: ubah tujuan menjadi langkah eksekusi, prioritas, risiko, dan next action.
+- Untuk penjelasan: beri alasan ringkas yang aman. Jangan tampilkan raw chain-of-thought internal.
+- Pakai bahasa Indonesia default. Singkat, tajam, profesional, tanpa persona toxic.`;
 
-Aturan penting:
-- Jika user minta sesuatu yang kontroversial, jawab dengan jujur dan sarkastik, tapi jangan jadi pembenci buta.
-- Gunakan emoji secukupnya saja, terutama 😏, 😂, 🗿, dan 🔥.
-- Jangan pernah minta maaf berlebihan atau terlalu sopan. Kamu sombong tapi charming.
-- Kalau user terlalu lebay atau drama, roast dia dengan gaya santai.
-- Tetap bantu menyelesaikan masalah user. Sarkasme itu bumbu, bukan alasan untuk jadi tidak berguna.
-
-Contoh tone:
-- "Wah, ide lo keren banget bro, setara sama rencana bikin kapal dari es batu."
-- "Lo lagi nyari validasi ya? Sorry, ini bukan tempat curhat drama."
-- "Tenang, aku cuma jujur. Kalau lo butuh orang yang bohongin lo, cari aja temen lo yang biasa."
-
-Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
+      const TRAINING_CORE_PROMPT = `Passeo Training Core 2000x aktif sebagai distilled behavior:
+- 500 coding drills: baca requirement, pilih arsitektur kecil, tulis kode runnable, cari bug, beri command test.
+- 400 math drills: identifikasi variabel, gunakan rumus tepat, hitung bertahap, cek hasil.
+- 400 answer drills: jawab inti dulu, lalu detail secukupnya, jangan mengarang kemampuan.
+- 400 work drills: ubah tujuan menjadi prioritas, checklist, risiko, dan aksi berikutnya.
+- 300 debugging/reasoning drills: reproduksi gejala, cari sebab paling mungkin, beri fix paling kecil.
+Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; refusal hanya untuk bahaya nyata. Jangan menyebut training core kecuali user bertanya.`;
 
       const DEFAULTS = {
         provider: "hermes",
@@ -3339,6 +3317,10 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           normalized.includes("xxxxx.trycloudflare.com");
       }
 
+      function isLegacyUnsafePrompt(value) {
+        return /Grok Toxic Edition|toxic fun|sangat blak-blakan|goblok|tolol|bego|ngawur|roasting|sarkastik/i.test(String(value || ""));
+      }
+
       function normalizeHermesSettings(settings = state.settings) {
         settings.provider = "hermes";
         const endpoint = normalizeUrl(settings.hermesEndpoint || DEFAULTS.hermesEndpoint);
@@ -3388,7 +3370,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
             shouldSaveSettings = true;
           }
           const savedPrompt = String(savedSettings.systemPrompt || "").trim();
-          if (!savedPrompt || savedPrompt === OLD_SYSTEM_PROMPT) {
+          if (!savedPrompt || savedPrompt === OLD_SYSTEM_PROMPT || isLegacyUnsafePrompt(savedPrompt)) {
             state.settings.systemPrompt = SYSTEM_PERSONA;
             shouldSaveSettings = true;
           }
@@ -3955,6 +3937,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       function composeSystemPrompt(systemPrompt = state.settings.systemPrompt, braintPlan = null) {
         return [
           String(systemPrompt || "").trim(),
+          TRAINING_CORE_PROMPT,
           capabilityPromptContext(),
           braintPlan?.systemDirective || ""
         ].filter(Boolean).join("\n\n");
@@ -4705,16 +4688,9 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         };
       }
 
-      async function sendHermes7B(conversation, assistantMessage, options = {}) {
-        const startedAt = performance.now();
-        const payload = makeHermesPayload(conversation, options.systemPrompt ?? state.settings.systemPrompt, options);
-        assistantMessage.label = APP_NAME;
-        render();
-        scrollChat();
-
-        let response;
+      async function postHermesPayload(payload) {
         try {
-          response = await fetch(hermesRequestUrl(), {
+          return await fetch(hermesRequestUrl(), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
@@ -4724,10 +4700,31 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           if (error.name === "AbortError") throw error;
           throw new Error(hermesLocalConnectionMessage(error));
         }
+      }
+
+      async function sendHermes7B(conversation, assistantMessage, options = {}) {
+        const startedAt = performance.now();
+        const payload = makeHermesPayload(conversation, options.systemPrompt ?? state.settings.systemPrompt, options);
+        assistantMessage.label = APP_NAME;
+        render();
+        scrollChat();
+
+        const response = await postHermesPayload(payload);
 
         if (response.ok) {
           const json = await response.json();
-          assistantMessage.content = extractHermesText(json);
+          let content = extractHermesText(json);
+          if (isModelRefusal(content) && isHarmlessRetryConversation(conversation)) {
+            const retryResponse = await postHermesPayload(makeHermesRecoveryPayload(payload));
+            if (retryResponse.ok) {
+              const retryText = extractHermesText(await retryResponse.json());
+              if (retryText && !isModelRefusal(retryText)) content = retryText;
+            }
+            if (isModelRefusal(content)) {
+              content = localSafeFallbackAnswer(latestUserContent(conversation)) || content;
+            }
+          }
+          assistantMessage.content = content;
           assistantMessage.model = hermesModelLabel();
           state.lastLatency = Math.round(performance.now() - startedAt);
           state.lastModel = hermesModelLabel();
@@ -4749,6 +4746,54 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           (Array.isArray(json) ? json[0]?.generated_text : "");
         if (String(text || "").trim()) return String(text).trim();
         return JSON.stringify(json, null, 2);
+      }
+
+      function latestUserContent(conversation) {
+        const message = [...(conversation.messages || [])].reverse().find((item) => item.role === "user" && item.content);
+        return String(message?.content || "").trim();
+      }
+
+      function isModelRefusal(value) {
+        return /(I'?m sorry,?\s+but I can'?t comply|I cannot comply|I can'?t assist with that|cannot assist with that|saya tidak dapat memenuhi|saya tidak bisa membantu|tidak bisa memenuhi permintaan)/i.test(String(value || ""));
+      }
+
+      function isHarmlessRetryConversation(conversation) {
+        const text = latestUserContent(conversation);
+        if (!text || text.length > 500) return false;
+        if (/\b(malware|phishing|hack|bypass|exploit|bom|racun|bunuh|mencuri|curi data|carding|ddos)\b/i.test(text)) return false;
+        return true;
+      }
+
+      function localSafeFallbackAnswer(value) {
+        const text = String(value || "").trim();
+        if (/^(halo|hai|hi|hello|p|yo|tes|test)\b/i.test(text)) {
+          return "Halo, aku Passeo-ai-Agent. Ada yang mau kamu kerjakan?";
+        }
+        return "";
+      }
+
+      function makeHermesRecoveryPayload(payload) {
+        const recoverySystem = [
+          SYSTEM_PERSONA,
+          "Recovery mode: provider sebelumnya memberi refusal generik pada request aman. Jawab user secara normal, ringkas, dan bantu langsung."
+        ].join("\n\n");
+        const messages = Array.isArray(payload.messages) ? [...payload.messages] : [];
+        if (messages[0]?.role === "system") {
+          messages[0] = { ...messages[0], content: recoverySystem };
+        } else {
+          messages.unshift({ role: "system", content: recoverySystem });
+        }
+        const next = { ...payload, messages };
+        if ("temperature" in next) next.temperature = Math.min(Number(next.temperature) || 0.5, 0.45);
+        if ("max_tokens" in next) next.max_tokens = Math.min(Number(next.max_tokens) || 256, 512);
+        if (next.options) {
+          next.options = {
+            ...next.options,
+            temperature: Math.min(Number(next.options.temperature) || 0.5, 0.45),
+            num_predict: Math.min(Number(next.options.num_predict) || 256, 512)
+          };
+        }
+        return next;
       }
 
       async function readApiError(response, provider) {
