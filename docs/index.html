@@ -2901,11 +2901,12 @@
               </label>
               <label>
                 <span>Server model endpoint</span>
-                <input id="hermesEndpoint" class="field" value="https://your-hermes-7b-server.example.com" />
+                <input id="hermesEndpoint" class="field" value="" placeholder="https://xxxxx.trycloudflare.com" />
               </label>
               <p class="note">
-                Model dikunci ke Hermes 7B sekitar 4GB. Jalankan model di server luar dengan HTTPS, lalu endpoint ini akan memakai /api/chat.
+                Buka Colab, Run all, tunggu model 7B selesai download, lalu paste URL trycloudflare ke field ini.
               </p>
+              <a class="btn btn-soft" href="https://colab.research.google.com/github/izrai4103-lgtm/ai-agent-chat/blob/main/colab/passeo-hermes-7b-colab.ipynb" target="_blank" rel="noreferrer">Buka Colab model host</a>
               <div style="display:grid;grid-template-columns:1fr auto;gap:8px">
                 <button id="testHermesButton" class="btn btn-primary" type="button">Uji server 7B</button>
                 <button id="saveSettingsButton" class="btn btn-soft" type="button" title="Simpan" aria-label="Simpan">OK</button>
@@ -3117,6 +3118,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.</textarea>
       const HERMES_HOSTED_CODE_MAX_OUTPUT_TOKENS = 768;
       const HERMES_OPENAI_MAX_OUTPUT_TOKENS = 2048;
       const HERMES_HOSTED_TEST_TOKENS = 8;
+      const COLAB_NOTEBOOK_URL = "https://colab.research.google.com/github/izrai4103-lgtm/ai-agent-chat/blob/main/colab/passeo-hermes-7b-colab.ipynb";
       const EXPLANATION_REQUEST_PATTERN =
         /\b(jelaskan|jelasin|terangkan|uraikan|rincikan|analisis|analisa|bedah|kenapa|mengapa|kok|alasan|sebab|penyebab|explain|why|reason|analyze|analyse|break down|how come)\b/i;
       const GET_TIME_REQUEST_PATTERN =
@@ -3153,7 +3155,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
 
       const DEFAULTS = {
         provider: "hermes",
-        hermesEndpoint: "https://your-hermes-7b-server.example.com",
+        hermesEndpoint: "",
         hermesModel: "nous-hermes:7b",
         chainOfThoughtForced: true,
         systemPrompt: SYSTEM_PERSONA
@@ -3328,9 +3330,18 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         return `${normalizeUrl(base)}${path.startsWith("/") ? path : `/${path}`}`;
       }
 
+      function isPlaceholderEndpoint(value) {
+        const normalized = normalizeUrl(value).toLowerCase();
+        return !normalized ||
+          normalized.includes("your-hermes-7b-server.example.com") ||
+          normalized.includes("paste-colab") ||
+          normalized.includes("xxxxx.trycloudflare.com");
+      }
+
       function normalizeHermesSettings(settings = state.settings) {
         settings.provider = "hermes";
-        settings.hermesEndpoint = normalizeUrl(settings.hermesEndpoint || DEFAULTS.hermesEndpoint);
+        const endpoint = normalizeUrl(settings.hermesEndpoint || "");
+        settings.hermesEndpoint = isPlaceholderEndpoint(endpoint) ? "" : endpoint;
         settings.hermesModel = HERMES_7B_MODELS.includes(settings.hermesModel)
           ? settings.hermesModel
           : DEFAULTS.hermesModel;
@@ -3813,7 +3824,8 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         state.settings.provider = document.querySelector(".provider-tabs button.active")?.dataset.provider || state.settings.provider;
         if (state.settingsUnlocked) {
           state.settings.hermesModel = $("hermesModel").value || DEFAULTS.hermesModel;
-          state.settings.hermesEndpoint = $("hermesEndpoint").value.trim() || DEFAULTS.hermesEndpoint;
+          const endpoint = normalizeUrl($("hermesEndpoint").value.trim());
+          state.settings.hermesEndpoint = isPlaceholderEndpoint(endpoint) ? "" : endpoint;
           state.settings.chainOfThoughtForced = $("chainOfThoughtForced").checked;
           state.settings.systemPrompt = $("systemPrompt").value;
         }
@@ -3823,7 +3835,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       function writeSettingsToForm() {
         normalizeHermesSettings(state.settings);
         $("hermesModel").value = state.settings.hermesModel || DEFAULTS.hermesModel;
-        $("hermesEndpoint").value = state.settings.hermesEndpoint || DEFAULTS.hermesEndpoint;
+        $("hermesEndpoint").value = state.settings.hermesEndpoint || "";
         $("chainOfThoughtForced").checked = state.settings.chainOfThoughtForced !== false;
         $("systemPrompt").value = state.settings.systemPrompt || DEFAULTS.systemPrompt;
         document.querySelectorAll(".provider-tabs button").forEach((button) => {
@@ -4342,7 +4354,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           "# Jalankan di VPS/RunPod/Fly/Render, bukan di GitHub Pages.",
           "docker compose -f model-server/docker-compose.yml up -d --build",
           "docker compose -f model-server/docker-compose.yml exec ollama ollama pull nous-hermes:7b",
-          `curl "${joinUrl(state.settings.hermesEndpoint, "/api/chat")}" \\`,
+          `curl "${joinUrl(state.settings.hermesEndpoint || "https://URL-COLAB-KAMU.trycloudflare.com", "/api/chat")}" \\`,
           "  -H 'Content-Type: application/json' \\",
           `  -d '{"model":"${state.settings.hermesModel}","stream":false,"messages":[{"role":"user","content":"Halo Hermes"}],"options":{"num_ctx":512,"num_predict":32,"num_thread":2}}'`
         ].join("\n");
@@ -4633,7 +4645,10 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
       }
 
       function hermesRequestUrl(endpoint = state.settings.hermesEndpoint) {
-        const base = normalizeUrl(endpoint || DEFAULTS.hermesEndpoint);
+        const base = normalizeUrl(endpoint || "");
+        if (isPlaceholderEndpoint(base)) {
+          throw new Error(`Endpoint Hermes 7B belum diisi. Buka Colab, Run all, copy URL trycloudflare, lalu paste ke Server model endpoint. ${COLAB_NOTEBOOK_URL}`);
+        }
         if (base.endsWith("/api/chat") || base.endsWith("/v1/chat/completions")) return base;
         return hermesEndpointMode(base) === "openai" ? joinUrl(base, "/chat/completions") : joinUrl(base, "/api/chat");
       }
@@ -4642,8 +4657,8 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         const detail = error?.message ? ` Detail: ${error.message}` : "";
         return [
           "Server Hermes 7B belum tersambung.",
-          "Pastikan model 4GB sudah ada di server luar: ollama pull nous-hermes:7b.",
-          `Pastikan endpoint HTTPS hidup di ${state.settings.hermesEndpoint || DEFAULTS.hermesEndpoint}.`,
+          "Buka Colab model host, Run all, tunggu model 4GB selesai download, lalu paste URL trycloudflare ke Server model endpoint.",
+          state.settings.hermesEndpoint ? `Endpoint sekarang: ${state.settings.hermesEndpoint}.` : `Colab: ${COLAB_NOTEBOOK_URL}`,
           detail
         ].join(" ");
       }
@@ -4866,7 +4881,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
         } catch (error) {
           assistantMessage.error = true;
           assistantMessage.content = error.name === "AbortError" ? "Generasi dihentikan." : error.message;
-          setStatus(state.settings.provider, "bad", error.name === "AbortError" ? "Stop" : "Local off");
+          setStatus(state.settings.provider, "bad", error.name === "AbortError" ? "Stop" : "Server off");
         } finally {
           assistantMessage.pending = false;
           conversation.updatedAt = Date.now();
@@ -4899,7 +4914,7 @@ Mulai sekarang, jawab semua pesan user dengan gaya ini.`;
           setStatus("hermes", "ok", tempMessage.model ? `Online: ${APP_NAME}` : "Online");
           showToast("Server Hermes 7B tersambung.");
         } catch (error) {
-          setStatus("hermes", "bad", "Local off");
+          setStatus("hermes", "bad", state.settings.hermesEndpoint ? "Server off" : "Isi endpoint");
           showToast(error.message.slice(0, 180));
         } finally {
           state.abortController = null;
