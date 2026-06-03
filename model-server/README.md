@@ -64,3 +64,12 @@ npm run tunnel:cloudflare
 ```
 
 Copy URL `https://...trycloudflare.com` ke endpoint app, atau update `PUBLIC_GEMMA_ENDPOINT` di `index.html`.
+
+Untuk menjaga tunnel tetap hidup:
+
+```bash
+cd model-server
+nohup npm run watch:tunnel > /tmp/passeo-cloudflare-watchdog.log 2>&1 &
+```
+
+Catatan: quick tunnel gratis dari Cloudflare tidak menjamin URL permanen jika proses tunnel mati dan dibuat ulang. Untuk URL benar-benar permanen, pakai named tunnel Cloudflare dengan domain akun sendiri.
