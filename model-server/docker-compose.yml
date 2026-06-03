@@ -19,7 +19,7 @@ services:
       - ollama
     environment:
       PORT: "8080"
-      HERMES_MODEL: "nous-hermes:7b"
+      HERMES_MODEL: "gemma2:2b"
       HERMES_UPSTREAM_URL: "http://ollama:11434"
       HERMES_UPSTREAM_MODE: "ollama"
       HERMES_NUM_CTX: "512"

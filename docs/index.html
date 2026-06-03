@@ -6,7 +6,7 @@
     <title>Passeo-ai-Agent</title>
     <meta
       name="description"
-      content="External hosted AI chat agent with Hugging Face Llama 3.1."
+      content="Local no-key AI chat agent with Gemma 2 2B."
     />
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
     <style>
@@ -2842,7 +2842,7 @@
           <div style="display:flex;gap:8px">
             <button id="downloadButton" class="btn btn-soft btn-icon" type="button" title="Ekspor chat" aria-label="Ekspor chat">DL</button>
             <button id="deleteButton" class="btn btn-soft btn-icon" type="button" title="Hapus chat" aria-label="Hapus chat">×</button>
-            <a class="btn btn-soft btn-icon" href="https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct" target="_blank" rel="noreferrer" title="Hugging Face Llama 3.1 model" aria-label="Hugging Face Llama 3.1 model">?</a>
+            <a class="btn btn-soft btn-icon" href="https://huggingface.co/google/gemma-2-2b-it" target="_blank" rel="noreferrer" title="Gemma 2 2B model" aria-label="Gemma 2 2B model">?</a>
           </div>
         </footer>
       </aside>
@@ -2871,7 +2871,7 @@
           <div class="ops-card">
             <span class="ops-label">Runtime</span>
             <strong id="opsRuntime" class="ops-value">Idle</strong>
-            <small id="opsRuntimeMeta">Hugging Face standby</small>
+            <small id="opsRuntimeMeta">Gemma local standby</small>
           </div>
           <div class="ops-card">
             <span class="ops-label">Agent</span>
@@ -2923,7 +2923,7 @@
 
           <section id="connectionPanel" class="settings-grid">
             <div class="provider-tabs provider-tabs-single">
-              <button data-provider="hermes" class="active" type="button">Hugging Face</button>
+              <button data-provider="hermes" class="active" type="button">Gemma Local</button>
             </div>
 
             <div class="box security-box">
@@ -2947,19 +2947,15 @@
               <label>
                 <span>Model</span>
                 <select id="hermesModel" class="field">
-                  <option value="meta-llama/Llama-3.1-8B-Instruct">Llama 3.1 8B Instruct · Hugging Face</option>
+                  <option value="gemma2:2b">Gemma 2 2B · no-key local</option>
                 </select>
               </label>
               <label>
-                <span>Hugging Face endpoint</span>
-                <input id="hermesEndpoint" class="field" value="https://router.huggingface.co/v1/chat/completions" readonly />
-              </label>
-              <label>
-                <span>HF token</span>
-                <input id="hermesToken" class="field" type="password" autocomplete="off" placeholder="hf_..." />
+                <span>Model server endpoint</span>
+                <input id="hermesEndpoint" class="field" value="http://127.0.0.1:8080/v1/chat/completions" />
               </label>
               <p class="note">
-                App ini hanya memakai satu model Hugging Face: meta-llama/Llama-3.1-8B-Instruct. Token disimpan lokal di browser perangkat ini.
+                App ini memakai Gemma 2 2B yang berjalan di model server lokal. Tidak perlu API key; untuk HP/GitHub Pages, pakai endpoint HTTPS tunnel model server.
               </p>
               <div style="display:grid;grid-template-columns:1fr auto;gap:8px">
                 <button id="testHermesButton" class="btn btn-primary" type="button">Uji endpoint</button>
@@ -3013,7 +3009,7 @@ Aturan utama:
             </div>
             <div class="box">
               <div class="box-head">
-                <h3>Hugging Face curl</h3>
+                <h3>Gemma local curl</h3>
                 <button class="btn btn-soft copy-button" type="button" data-copy="hermesSnippet">Copy</button>
               </div>
               <pre id="hermesSnippet" class="codebox"></pre>
@@ -3158,19 +3154,18 @@ Aturan utama:
       const VECTOR_DB_VERSION = 1;
       const VECTOR_STORE = "records";
       const VECTOR_DIMENSIONS = 64;
-      const HERMES_CONTEXT_MESSAGE_LIMIT = 4;
-      const HERMES_CONTEXT_CHAR_LIMIT = 2200;
-      const HERMES_SYSTEM_PROMPT_CHAR_LIMIT = 2600;
-      const HERMES_HOSTED_MAX_OUTPUT_TOKENS = 256;
+      const HERMES_CONTEXT_MESSAGE_LIMIT = 2;
+      const HERMES_CONTEXT_CHAR_LIMIT = 240;
+      const HERMES_SYSTEM_PROMPT_CHAR_LIMIT = 240;
+      const HERMES_HOSTED_MAX_OUTPUT_TOKENS = 48;
       const HERMES_HOSTED_CODE_MAX_OUTPUT_TOKENS = 768;
       const HERMES_OPENAI_MAX_OUTPUT_TOKENS = 2048;
       const HERMES_HOSTED_TEST_TOKENS = 8;
-      const HUGGINGFACE_ENDPOINT = "https://router.huggingface.co/v1/chat/completions";
-      const HUGGINGFACE_MODEL = "meta-llama/Llama-3.1-8B-Instruct";
-      const HUGGINGFACE_RETRY_STATUSES = new Set([408, 409, 425, 429, 500, 502, 503, 504]);
-      const HUGGINGFACE_MAX_RETRIES = 4;
-      const HUGGINGFACE_RETRY_DELAYS = [1500, 3000, 5000, 8000];
-      const HUGGINGFACE_FAST_FALLBACK_TIMEOUT_MS = 8000;
+      const GEMMA_SERVER_ENDPOINT = "http://127.0.0.1:8080/v1/chat/completions";
+      const GEMMA_MODEL = "gemma2:2b";
+      const GEMMA_RETRY_STATUSES = new Set([408, 409, 425, 429, 500, 502, 503, 504]);
+      const GEMMA_MAX_RETRIES = 4;
+      const GEMMA_RETRY_DELAYS = [1500, 3000, 5000, 8000];
       const EXPLANATION_REQUEST_PATTERN =
         /\b(jelaskan|jelasin|terangkan|uraikan|rincikan|analisis|analisa|bedah|kenapa|mengapa|kok|alasan|sebab|penyebab|explain|why|reason|analyze|analyse|break down|how come)\b/i;
       const GET_TIME_REQUEST_PATTERN =
@@ -3200,23 +3195,22 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
 
       const DEFAULTS = {
         provider: "hermes",
-        hermesEndpoint: HUGGINGFACE_ENDPOINT,
-        hermesModel: HUGGINGFACE_MODEL,
-        hermesToken: "",
+        hermesEndpoint: GEMMA_SERVER_ENDPOINT,
+        hermesModel: GEMMA_MODEL,
         chainOfThoughtForced: true,
         systemPrompt: SYSTEM_PERSONA
       };
 
-      const HUGGINGFACE_MODELS = Object.freeze([
+      const GEMMA_MODELS = Object.freeze([
         {
-          id: HUGGINGFACE_MODEL,
-          label: "Llama 3.1 8B Instruct",
-          detail: "Official gated Meta Llama 3.1 model via Hugging Face Inference Router",
+          id: GEMMA_MODEL,
+          label: "Gemma 2 2B",
+          detail: "No-key local Gemma 2 2B model server",
           reasoning: true
         }
       ]);
-      const HERMES_7B_MODELS = HUGGINGFACE_MODELS.map((model) => model.id);
-      const HERMES_EXTERNAL_CHAT_TIMEOUT_MS = 45000;
+      const HERMES_7B_MODELS = GEMMA_MODELS.map((model) => model.id);
+      const HERMES_EXTERNAL_CHAT_TIMEOUT_MS = 120000;
       const HERMES_TEST_TIMEOUT_MS = 20000;
       const HERMES_CODE_TIMEOUT_MS = 180000;
 
@@ -3388,21 +3382,30 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         return /toxic fun|sangat blak-blakan|goblok|tolol|bego|ngawur|roasting|sarkastik/i.test(String(value || ""));
       }
 
+      function isLegacyHostedEndpoint(value) {
+        const normalized = normalizeUrl(value).toLowerCase();
+        return !normalized ||
+          normalized.includes("router." + "huggingface.co") ||
+          normalized.includes("text." + "poll" + "inations.ai");
+      }
+
       function effectiveHermesEndpoint(endpoint = state.settings.hermesEndpoint, model = state.settings.hermesModel) {
-        return HUGGINGFACE_ENDPOINT;
+        return normalizeUrl(endpoint) || GEMMA_SERVER_ENDPOINT;
       }
 
       function modelDefaultEndpoint(model, currentEndpoint = "") {
-        return HUGGINGFACE_ENDPOINT;
+        return isLegacyHostedEndpoint(currentEndpoint) ? GEMMA_SERVER_ENDPOINT : normalizeUrl(currentEndpoint);
       }
 
       function normalizeHermesSettings(settings = state.settings) {
         settings.provider = "hermes";
-        settings.hermesEndpoint = HUGGINGFACE_ENDPOINT;
+        settings.hermesEndpoint = isLegacyHostedEndpoint(settings.hermesEndpoint)
+          ? GEMMA_SERVER_ENDPOINT
+          : normalizeUrl(settings.hermesEndpoint);
         settings.hermesModel = HERMES_7B_MODELS.includes(settings.hermesModel)
           ? settings.hermesModel
           : DEFAULTS.hermesModel;
-        settings.hermesToken = String(settings.hermesToken || settings.huggingFaceToken || "").trim();
+        delete settings.hermesToken;
         delete settings["gem" + "iniEndpoint"];
         delete settings["gem" + "iniModel"];
         delete settings["gem" + "iniKey"];
@@ -3413,20 +3416,12 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
       }
 
       function hermesModelLabel(model = state.settings.hermesModel) {
-        const item = HUGGINGFACE_MODELS.find((entry) => entry.id === model);
-        return item ? `${item.label} · Hugging Face` : "Hugging Face model";
+        const item = GEMMA_MODELS.find((entry) => entry.id === model);
+        return item ? `${item.label} · local` : "Gemma local model";
       }
 
-      function huggingFaceEndpointMessage() {
-        return "Endpoint Hugging Face belum tersambung. Pastikan HF token terisi, punya izin Inference Providers, dan sudah mendapat akses model gated Llama 3.1.";
-      }
-
-      function huggingFaceMissingTokenMessage() {
-        return "Token Hugging Face belum diisi. Buka Set > Koneksi, masukkan HF token dengan permission Inference Providers dan akses model Llama 3.1.";
-      }
-
-      function huggingFaceToken() {
-        return String(state.settings.hermesToken || "").trim();
+      function gemmaEndpointMessage() {
+        return "Endpoint Gemma 2 2B belum tersambung. Jalankan model-server lokal atau isi endpoint HTTPS tunnel model server di Set > Koneksi.";
       }
 
       function activeConversation() {
@@ -3900,8 +3895,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         state.settings.provider = document.querySelector(".provider-tabs button.active")?.dataset.provider || state.settings.provider;
         if (state.settingsUnlocked) {
           state.settings.hermesModel = DEFAULTS.hermesModel;
-          state.settings.hermesEndpoint = HUGGINGFACE_ENDPOINT;
-          state.settings.hermesToken = $("hermesToken").value.trim();
+          state.settings.hermesEndpoint = $("hermesEndpoint").value.trim() || GEMMA_SERVER_ENDPOINT;
           state.settings.chainOfThoughtForced = $("chainOfThoughtForced").checked;
           state.settings.systemPrompt = $("systemPrompt").value;
         }
@@ -3912,7 +3906,6 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         normalizeHermesSettings(state.settings);
         $("hermesModel").value = state.settings.hermesModel || DEFAULTS.hermesModel;
         $("hermesEndpoint").value = state.settings.hermesEndpoint || DEFAULTS.hermesEndpoint;
-        $("hermesToken").value = state.settings.hermesToken || "";
         $("chainOfThoughtForced").checked = state.settings.chainOfThoughtForced !== false;
         $("systemPrompt").value = state.settings.systemPrompt || DEFAULTS.systemPrompt;
         document.querySelectorAll(".provider-tabs button").forEach((button) => {
@@ -3921,7 +3914,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
       }
 
       function providerLabel(provider = state.settings.provider) {
-        return "Hugging Face";
+        return "Gemma Local";
       }
 
       function assistantLabel() {
@@ -3933,7 +3926,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
       }
 
       function activeEndpointLabel() {
-        return "Hugging Face router endpoint";
+        return "No-key Gemma model server";
       }
 
       function sanitizeVisibleModelText(value) {
@@ -4023,8 +4016,6 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
       function composeSystemPrompt(systemPrompt = state.settings.systemPrompt, braintPlan = null) {
         return [
           String(systemPrompt || "").trim(),
-          TRAINING_CORE_PROMPT,
-          capabilityPromptContext(),
           braintPlan?.systemDirective || ""
         ].filter(Boolean).join("\n\n");
       }
@@ -4337,10 +4328,10 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         $("securityPill").innerHTML = `<span class="${statusDotClass(status)}"></span><span>${status.label}</span>`;
         $("lockSettingsButton").hidden = locked;
         $("securityNote").textContent = unlocked
-          ? "Kontrol token Hugging Face, uji koneksi, chain_of_thought_forced, dan system prompt bisa diedit."
+          ? "Kontrol endpoint model server, uji koneksi, chain_of_thought_forced, dan system prompt bisa diedit."
           : "Password ini hanya lock lokal di browser untuk mencegah edit tidak sengaja; bukan autentikasi server.";
 
-        ["hermesModel", "hermesEndpoint", "hermesToken", "chainOfThoughtForced", "systemPrompt", "testHermesButton", "saveSettingsButton"].forEach((id) => {
+        ["hermesModel", "hermesEndpoint", "chainOfThoughtForced", "systemPrompt", "testHermesButton", "saveSettingsButton"].forEach((id) => {
           const element = $(id);
           if (element) element.disabled = locked;
         });
@@ -4350,18 +4341,15 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
       function endpointKind(endpoint = state.settings.hermesEndpoint) {
         const normalized = normalizeUrl(endpoint);
         if (!normalized) return "missing";
-        if (normalized.includes("huggingface.co")) return "external";
         if (/\/\/(localhost|127\.0\.0\.1)\b/i.test(normalized)) return "loopback";
         if (/\.trycloudflare\.com\b/i.test(normalized)) return "tunnel";
+        if (normalized.includes("huggingface.co")) return "local-hf";
         return "custom";
       }
 
       function networkModeStatus() {
         const endpoint = effectiveHermesEndpoint(state.settings.hermesEndpoint, state.settings.hermesModel);
-        if (!endpoint) return { state: "bad", label: "Missing" };
-        return huggingFaceToken()
-          ? { state: "checking", label: "HF token" }
-          : { state: "bad", label: "Need token" };
+        return endpoint ? { state: "checking", label: "No key" } : { state: "bad", label: "Missing" };
       }
 
       function networkRows() {
@@ -4371,7 +4359,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         const rows = [
           {
             name: "Chat model",
-            status: `${huggingFaceToken() ? "HF token" : "token kosong"} · ${mode}`,
+            status: `no-key · ${mode}`,
             detail: `${state.settings.hermesModel} via ${endpointDetail}`
           },
           {
@@ -4491,20 +4479,19 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         ].join("\n");
 
         $("hermesSnippet").textContent = [
-          "# Hugging Face Inference Router:",
-          `curl "${HUGGINGFACE_ENDPOINT}" \\`,
-          "  -H 'Authorization: Bearer $HF_TOKEN' \\",
+          "# Gemma 2 2B no-key model server:",
+          `curl "${gemmaChatEndpoint(state.settings.hermesEndpoint)}" \\`,
           "  -H 'Content-Type: application/json' \\",
           `  -d '{"model":"${DEFAULTS.hermesModel}","stream":false,"messages":[{"role":"user","content":"Halo"}],"max_tokens":64}'`
         ].join("\n");
 
         $("colabSnippet").textContent = [
           "# Model aktif:",
-          "Provider: Hugging Face",
-          `Endpoint: ${HUGGINGFACE_ENDPOINT}`,
-          `Model: ${HUGGINGFACE_MODEL}`,
-          "API key: perlu HF token lokal",
-          "Catatan: model Llama 3.1 resmi gated; akun/token harus sudah mendapat akses model."
+          "Provider: Gemma Local",
+          `Endpoint: ${gemmaChatEndpoint(state.settings.hermesEndpoint)}`,
+          `Model: ${GEMMA_MODEL}`,
+          "API key: tidak perlu",
+          "Catatan: jalankan model-server lokal atau tunnel HTTPS agar GitHub Pages/HP bisa mengakses model."
         ].join("\n");
       }
 
@@ -4779,25 +4766,31 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
       }
 
       function hermesEndpointMode(endpoint = state.settings.hermesEndpoint) {
-        return "openai";
+        return normalizeUrl(endpoint).endsWith("/api/chat") ? "ollama" : "openai";
+      }
+
+      function gemmaChatEndpoint(endpoint = state.settings.hermesEndpoint) {
+        const normalized = normalizeUrl(endpoint) || GEMMA_SERVER_ENDPOINT;
+        if (/\/(v1\/chat\/completions|api\/chat)$/i.test(normalized)) return normalized;
+        return joinUrl(normalized, "/v1/chat/completions");
       }
 
       function hermesRequestUrl(endpoint = state.settings.hermesEndpoint) {
-        return HUGGINGFACE_ENDPOINT;
+        return gemmaChatEndpoint(endpoint);
       }
 
       function hermesLocalConnectionMessage(error = null) {
         const detail = error?.message ? ` Detail: ${error.message}` : "";
         return [
-          huggingFaceEndpointMessage(),
-          `Endpoint: ${HUGGINGFACE_ENDPOINT}.`,
+          gemmaEndpointMessage(),
+          `Endpoint: ${gemmaChatEndpoint()}.`,
           detail
         ].join(" ");
       }
 
       function hermesTimeoutMessage(timeoutMs) {
         const seconds = Math.round(timeoutMs / 1000);
-        return `Request Hugging Face lewat ${seconds} detik. Coba lagi sebentar.`;
+        return `Request Gemma 2 2B lewat ${seconds} detik. Coba lagi sebentar.`;
       }
 
       function hermesRequestTimeoutMs(options = {}) {
@@ -4841,14 +4834,16 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
 
       async function assertLocalModelReady() {
         state.settings.hermesModel = DEFAULTS.hermesModel;
-        state.settings.hermesEndpoint = HUGGINGFACE_ENDPOINT;
+        state.settings.hermesEndpoint = effectiveHermesEndpoint();
       }
 
       function makeHermesPayload(conversation, systemPrompt = state.settings.systemPrompt, options = {}) {
         const braintPlan = options.braintPlan || buildBraintPlan(conversation, options);
         const finalSystemPrompt = compactText(composeSystemPrompt(systemPrompt, braintPlan), HERMES_SYSTEM_PROMPT_CHAR_LIMIT);
         const messages = buildHermesMessages(conversation, braintPlan);
-        const outputTokenLimit = HERMES_OPENAI_MAX_OUTPUT_TOKENS;
+        const outputTokenLimit = options.maxOutputTokens && options.maxOutputTokens >= HERMES_HOSTED_CODE_MAX_OUTPUT_TOKENS
+          ? HERMES_HOSTED_CODE_MAX_OUTPUT_TOKENS
+          : HERMES_HOSTED_MAX_OUTPUT_TOKENS;
         const requestedMaxOutputTokens = Number(options.maxOutputTokens || braintPlan?.maxOutputTokens || outputTokenLimit);
         const maxOutputTokens = Math.max(1, Math.min(requestedMaxOutputTokens || outputTokenLimit, outputTokenLimit));
         const temperature = options.temperature || braintPlan?.temperature || 0.7;
@@ -4857,7 +4852,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
           : [];
 
         return {
-          model: HUGGINGFACE_MODEL,
+          model: GEMMA_MODEL,
           messages: [...systemMessage, ...messages],
           temperature,
           max_tokens: maxOutputTokens,
@@ -4865,20 +4860,20 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         };
       }
 
-      function isRetryableHuggingFaceStatus(status) {
-        return HUGGINGFACE_RETRY_STATUSES.has(Number(status));
+      function isRetryableGemmaStatus(status) {
+        return GEMMA_RETRY_STATUSES.has(Number(status));
       }
 
       function retryAfterDelayMs(response, attempt) {
         const retryAfter = Number(response.headers.get("retry-after") || 0);
         if (retryAfter > 0) return Math.min(retryAfter * 1000, 45000);
-        return HUGGINGFACE_RETRY_DELAYS[Math.min(attempt, HUGGINGFACE_RETRY_DELAYS.length - 1)];
+        return GEMMA_RETRY_DELAYS[Math.min(attempt, GEMMA_RETRY_DELAYS.length - 1)];
       }
 
-      function huggingFaceRetryMessage(response, attempt, delayMs) {
+      function gemmaRetryMessage(response, attempt, delayMs) {
         const seconds = Math.max(1, Math.round(delayMs / 1000));
-        const triesLeft = Math.max(0, HUGGINGFACE_MAX_RETRIES - attempt);
-        return `Hugging Face Llama 3.1 sedang sibuk (${response.status}). Mencoba ulang dalam ${seconds} detik. Sisa percobaan: ${triesLeft}.`;
+        const triesLeft = Math.max(0, GEMMA_MAX_RETRIES - attempt);
+        return `Gemma 2 2B model server sedang sibuk (${response.status}). Mencoba ulang dalam ${seconds} detik. Sisa percobaan: ${triesLeft}.`;
       }
 
       function isTransientProviderError(error) {
@@ -4892,26 +4887,16 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
       }
 
       async function postHermesPayload(payload, options = {}) {
-        const token = huggingFaceToken();
-        if (!token) {
-          const error = new Error(huggingFaceMissingTokenMessage());
-          error.name = "ConfigurationError";
-          throw error;
-        }
-
-        const maxRetries = Math.max(0, Number(options.maxRetries ?? HUGGINGFACE_MAX_RETRIES));
+        const maxRetries = Math.max(0, Number(options.maxRetries ?? GEMMA_MAX_RETRIES));
         try {
           for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
             const response = await fetchWithTimeout(hermesRequestUrl(), {
               method: "POST",
-              headers: {
-                "Authorization": `Bearer ${token}`,
-                "Content-Type": "application/json"
-              },
+              headers: { "Content-Type": "application/json" },
               body: JSON.stringify(payload)
             }, hermesRequestTimeoutMs(options));
 
-            if (!isRetryableHuggingFaceStatus(response.status) || attempt >= maxRetries) return response;
+            if (!isRetryableGemmaStatus(response.status) || attempt >= maxRetries) return response;
 
             const delayMs = retryAfterDelayMs(response, attempt);
             if (typeof options.onRetry === "function") {
@@ -4942,11 +4927,10 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
           response = await postHermesPayload(payload, {
             ...options,
             ...(canUseFastFallback ? {
-              maxRetries: 0,
-              timeoutMs: Math.min(Number(options.timeoutMs || HUGGINGFACE_FAST_FALLBACK_TIMEOUT_MS), HUGGINGFACE_FAST_FALLBACK_TIMEOUT_MS)
+              maxRetries: 0
             } : {}),
             onRetry: ({ response: retryResponse, attempt, maxRetries, delayMs }) => {
-              assistantMessage.content = huggingFaceRetryMessage(retryResponse, attempt, delayMs);
+              assistantMessage.content = gemmaRetryMessage(retryResponse, attempt, delayMs);
               assistantMessage.pending = true;
               setStatus("hermes", "checking", `Retry ${attempt}/${maxRetries}`);
               scrollChat();
@@ -4985,7 +4969,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         }
 
         const apiError = await readApiError(response, hermesModelLabel());
-        const fallback = localSafeFallbackAnswer(latestUserText, isRetryableHuggingFaceStatus(apiError?.status));
+        const fallback = localSafeFallbackAnswer(latestUserText, isRetryableGemmaStatus(apiError?.status));
         if (fallback) {
           assistantMessage.content = fallback;
           assistantMessage.model = `${hermesModelLabel()} fallback`;
@@ -5029,7 +5013,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         const text = String(value || "").trim();
         if (/^(halo|hai|hi|hello|p|yo|tes|test)\b/i.test(text)) {
           if (providerBusy) {
-            return "Halo, aku Passeo-ai-Agent. Hugging Face Llama 3.1 sedang padat atau lambat, tapi chat sudah aktif. Kirim tugas atau pertanyaanmu, lalu aku akan coba lewat model lagi.";
+            return "Halo, aku Passeo-ai-Agent. Gemma 2 2B model server sedang lambat atau belum tersambung, tapi chat sudah aktif. Jalankan model server lalu kirim tugasmu lagi.";
           }
           return "Halo, aku Passeo-ai-Agent. Ada yang mau kamu kerjakan?";
         }
@@ -5077,22 +5061,22 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         const status = response.status;
         const prefix = `${provider} error ${status}`;
         if (status === 401) {
-          return { status, message: `${prefix}: HF token tidak valid atau belum punya permission Inference Providers. Isi token yang benar di Set > Koneksi.` };
+          return { status, message: `${prefix}: endpoint model server meminta autentikasi. Pakai endpoint Gemma no-key atau buka akses CORS/server.` };
         }
         if (status === 403) {
-          return { status, message: `${prefix}: token tidak punya akses ke model gated Llama 3.1 atau Inference Providers. Request access di halaman model Hugging Face lalu coba lagi. Detail: ${detail}` };
+          return { status, message: `${prefix}: endpoint model server menolak request dari halaman ini. Cek CORS/origin server. Detail: ${detail}` };
         }
         if (status === 404) {
-          return { status, message: `${prefix}: model ${HUGGINGFACE_MODEL} tidak tersedia lewat router/token ini. Detail: ${detail || response.statusText}` };
+          return { status, message: `${prefix}: endpoint tidak ditemukan. Isi base URL model server atau /v1/chat/completions. Detail: ${detail || response.statusText}` };
         }
         if (status === 429) {
-          return { status, message: `${prefix}: kuota atau rate limit Hugging Face penuh. Tunggu sebentar lalu coba lagi.` };
+          return { status, message: `${prefix}: model server sedang penuh. Tunggu sebentar lalu coba lagi.` };
         }
         if (status === 503) {
-          return { status, message: `${prefix}: Hugging Face sedang penuh atau provider model belum siap.` };
+          return { status, message: `${prefix}: Gemma 2 2B belum siap atau model belum dimuat.` };
         }
         if ([400, 422].includes(status)) {
-          return { status, message: `${prefix}: request Hugging Face ditolak. Detail: ${detail}` };
+          return { status, message: `${prefix}: request model server ditolak. Detail: ${detail}` };
         }
         return { status, message: `${prefix}: ${detail || response.statusText}` };
       }
@@ -5268,9 +5252,9 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
             timeoutMs: HERMES_TEST_TIMEOUT_MS
           });
           setStatus("hermes", "ok", tempMessage.model ? `Online: ${APP_NAME}` : "Online");
-          showToast("Hugging Face Llama 3.1 tersambung.");
+          showToast("Gemma 2 2B model server tersambung.");
         } catch (error) {
-          setStatus("hermes", "bad", error.name === "ConfigurationError" ? "Need token" : "Offline");
+          setStatus("hermes", "bad", "Offline");
           showToast(error.message.slice(0, 180));
         } finally {
           state.abortController = null;

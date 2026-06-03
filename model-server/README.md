@@ -1,4 +1,4 @@
-# Passeo Hermes 7B Model Server
+# Passeo Gemma 2 2B Model Server
 
 Server ini untuk bagian model AI. GitHub Pages tetap dipakai sebagai UI, sedangkan server ini dipasang di VPS/RunPod/Fly/Render atau host lain yang bisa menjalankan container.
 
@@ -6,7 +6,7 @@ Server ini untuk bagian model AI. GitHub Pages tetap dipakai sebagai UI, sedangk
 
 ```bash
 docker compose up -d --build
-docker compose exec ollama ollama pull nous-hermes:7b
+docker compose exec ollama ollama pull gemma2:2b
 ```
 
 Pasang domain HTTPS ke port `8080`, lalu isi endpoint di app:
@@ -28,11 +28,11 @@ POST /v1/chat/completions
 
 GitHub Pages tidak menjalankan model. Pages hanya memanggil endpoint HTTPS server ini.
 
-## GitHub Pages + Gemma 2 2B model server
+## GitHub Pages + Gemma 2 2B no-key model server
 
 Frontend resmi dipakai dari GitHub Pages. Model tetap berjalan di model server ini dan dibuka lewat endpoint HTTPS publik/tunnel.
 
-Jalankan proxy lokal ini:
+Jalankan proxy lokal dengan model yang sudah terunduh di Ollama:
 
 ```bash
 OLLAMA_ORIGINS="https://*.github.io,http://localhost:*" ollama serve
@@ -43,6 +43,33 @@ Lalu pakai endpoint:
 
 ```text
 http://127.0.0.1:8080
+```
+
+Endpoint chat no-key:
+
+```text
+http://127.0.0.1:8080/v1/chat/completions
+```
+
+## Hugging Face Transformers lokal
+
+Jika Gemma 2 2B sudah ada di cache Hugging Face atau folder lokal, server ini juga bisa dijalankan langsung dengan Transformers tanpa API key/browser token:
+
+```bash
+python3 -m pip install -r requirements-hf.txt
+GEMMA_MODEL_PATH=google/gemma-2-2b-it npm run hf:gemma
+```
+
+Default `GEMMA_LOCAL_FILES_ONLY=1`, jadi server hanya memakai file lokal yang sudah ada. Untuk folder manual:
+
+```bash
+GEMMA_MODEL_PATH=/path/ke/gemma-2-2b-it npm run hf:gemma
+```
+
+Status:
+
+```bash
+npm run status:hf-gemma
 ```
 
 ## Local watchdog
@@ -68,7 +95,7 @@ cd model-server
 npm run tunnel:cloudflare
 ```
 
-Copy URL `https://...trycloudflare.com` ke endpoint app, atau update `PUBLIC_GEMMA_ENDPOINT` di `index.html`.
+Copy URL `https://...trycloudflare.com` ke endpoint app di **Set > Koneksi**.
 
 Untuk menjaga tunnel tetap hidup:
 

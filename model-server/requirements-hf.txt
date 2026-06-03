@@ -1,0 +1,4 @@
+accelerate>=0.33
+sentencepiece>=0.2
+torch>=2.3
+transformers>=4.43

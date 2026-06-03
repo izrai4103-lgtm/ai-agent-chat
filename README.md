@@ -1,12 +1,12 @@
 # AI Agent Chat
 
-Static GitHub Pages app for chatting with Passeo-ai-Agent through one Hugging Face Llama 3.1 model:
+Static GitHub Pages app for chatting with Passeo-ai-Agent through one no-key local Gemma 2 2B model server:
 
-- Endpoint: `https://router.huggingface.co/v1/chat/completions`
-- Model: `meta-llama/Llama-3.1-8B-Instruct`
-- API key: Hugging Face token entered locally in the browser
+- Default endpoint: `http://127.0.0.1:8080/v1/chat/completions`
+- Model: `gemma2:2b`
+- API key: not required
 
-The browser app stores chat history, settings, Hugging Face token, enabled skills, and Vector DB cache locally. Chat prompts are sent only to the model endpoint selected in Settings.
+The browser app stores chat history, settings, enabled skills, and Vector DB cache locally. Chat prompts are sent only to the model endpoint selected in Settings.
 
 ## Local preview
 
@@ -18,6 +18,25 @@ python3 -m http.server 4175 --bind 127.0.0.1
 Open `http://127.0.0.1:4175`.
 
 The legacy `hermes-ollama-agent/` folder is kept as a standalone copy. GitHub Pages should use `docs/`.
+
+## Local Gemma
+
+Use the already-downloaded Ollama model:
+
+```bash
+cd model-server
+npm run local:gemma
+```
+
+Or run a local Hugging Face/Transformers copy if `google/gemma-2-2b-it` is already available in the Hugging Face cache or in `GEMMA_MODEL_PATH`:
+
+```bash
+cd model-server
+python3 -m pip install -r requirements-hf.txt
+npm run hf:gemma
+```
+
+For GitHub Pages from another device, expose port `8080` with a tunnel and paste the HTTPS endpoint in **Set > Koneksi**.
 
 ## GitHub Pages
 
@@ -33,8 +52,7 @@ gh repo create ai-agent-chat --public --source=. --remote=origin --push
 
 In GitHub, enable Pages with **Build and deployment: Deploy from a branch**, then select branch `main` and folder `/docs`.
 
-No Hugging Face token is committed. Llama 3.1 is a gated Hugging Face model, so the browser token must have Inference Providers permission and access to `meta-llama/Llama-3.1-8B-Instruct`.
-Temporary Hugging Face responses such as `408`, `409`, `425`, `429`, `500`, `502`, `503`, and `504` are retried before showing an error.
+No model API key is committed or required. Temporary model-server responses such as `408`, `409`, `425`, `429`, `500`, `502`, `503`, and `504` are retried before showing an error.
 
 ## TikTok LIVE Connector
 

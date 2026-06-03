@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const PORT = Number(process.env.PORT || 8080);
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const STATIC_DIR = path.resolve(process.env.STATIC_DIR || path.join(ROOT_DIR, "docs"));
-const DEFAULT_MODEL = process.env.HERMES_MODEL || "nous-hermes:7b";
+const DEFAULT_MODEL = process.env.HERMES_MODEL || "gemma2:2b";
 const UPSTREAM_URL = trimTrailingSlash(process.env.HERMES_UPSTREAM_URL || "http://ollama:11434");
 const UPSTREAM_MODE = String(process.env.HERMES_UPSTREAM_MODE || "ollama").toLowerCase();
 const MAX_BODY_BYTES = Number(process.env.MAX_BODY_BYTES || 2 * 1024 * 1024);
@@ -230,7 +230,7 @@ const server = http.createServer(async (req, res) => {
         detail: ok
           ? null
           : upstreamHealth?.ok
-            ? `Model ${DEFAULT_MODEL} belum tersedia di Ollama.`
+            ? `Model ${DEFAULT_MODEL} belum tersedia di upstream model runtime.`
             : "Ollama upstream belum tersambung."
       });
       return;
@@ -250,7 +250,7 @@ const server = http.createServer(async (req, res) => {
   } catch (error) {
     const status = error.status || 502;
     sendJson(res, status, {
-      error: "Hermes model server gagal memproses request.",
+      error: "Gemma model server gagal memproses request.",
       detail: error.message
     });
   }
