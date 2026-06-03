@@ -2906,7 +2906,7 @@
                 <input id="hermesEndpoint" class="field" value="https://text.pollinations.ai/openai" />
               </label>
               <p class="note">
-                Pollinations memakai endpoint eksternal. Gemma 2 2B memakai Ollama dari device ini di localhost:11434. Untuk Hermes 7B manual, pakai Colab/VPS lalu paste URL servernya.
+                Pollinations memakai endpoint eksternal. Gemma 2 2B memakai proxy lokal 127.0.0.1:8080 ke Ollama device ini. Untuk Hermes 7B manual, pakai Colab/VPS lalu paste URL servernya.
               </p>
               <a class="btn btn-soft" href="https://colab.research.google.com/github/izrai4103-lgtm/ai-agent-chat/blob/main/colab/passeo-hermes-7b-colab.ipynb" target="_blank" rel="noreferrer">Buka Colab model host</a>
               <div style="display:grid;grid-template-columns:1fr auto;gap:8px">
@@ -3146,7 +3146,8 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         "gemma2:2b",
         "nous-hermes:7b"
       ];
-      const LOCAL_OLLAMA_ENDPOINT = "http://localhost:11434";
+      const LOCAL_OLLAMA_ENDPOINT = "http://127.0.0.1:8080";
+      const DIRECT_OLLAMA_ENDPOINT = "http://127.0.0.1:11434";
       const LOCAL_DEVICE_MODELS = new Set(["gemma2:2b"]);
 
       const APP_NAME = "Passeo-ai-Agent";
@@ -3341,6 +3342,12 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
           : DEFAULTS.hermesModel;
         if (settings.hermesModel !== "openai" && settings.hermesEndpoint.includes("pollinations.ai")) {
           settings.hermesEndpoint = modelDefaultEndpoint(settings.hermesModel, settings.hermesEndpoint);
+        }
+        if (
+          LOCAL_DEVICE_MODELS.has(settings.hermesModel) &&
+          /\/\/(localhost|127\.0\.0\.1):11434\b/i.test(settings.hermesEndpoint)
+        ) {
+          settings.hermesEndpoint = LOCAL_OLLAMA_ENDPOINT;
         }
         if (LOCAL_DEVICE_MODELS.has(settings.hermesModel) && isPlaceholderEndpoint(settings.hermesEndpoint)) {
           settings.hermesEndpoint = LOCAL_OLLAMA_ENDPOINT;
@@ -4359,10 +4366,10 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
 
         $("hermesSnippet").textContent = [
           state.settings.hermesModel === "gemma2:2b"
-            ? "# Gemma 2 2B local device via Ollama:"
+            ? "# Gemma 2 2B local device via proxy PNA:"
             : "# Endpoint model aktif:",
           state.settings.hermesModel === "gemma2:2b"
-            ? "# Setup: ollama pull gemma2:2b && OLLAMA_ORIGINS=\"https://anyclaw.store,https://*.github.io,http://localhost:*\" ollama serve"
+            ? "# Setup: OLLAMA_ORIGINS=\"https://anyclaw.store,https://*.github.io,http://localhost:*\" ollama serve && cd model-server && HERMES_MODEL=gemma2:2b HERMES_UPSTREAM_URL=http://127.0.0.1:11434 PORT=8080 npm start"
             : "# Pollinations tidak butuh API key; Hermes manual butuh server/Colab hidup.",
           `curl "${hermesRequestUrl(state.settings.hermesEndpoint || DEFAULTS.hermesEndpoint)}" \\`,
           "  -H 'Content-Type: application/json' \\",
@@ -4671,8 +4678,8 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         if (LOCAL_DEVICE_MODELS.has(state.settings.hermesModel)) {
           return [
             "Gemma 2 2B local device belum tersambung.",
-            "Pastikan Ollama hidup di device ini, model sudah di-pull dengan: ollama pull gemma2:2b.",
-            "Jika app dibuka dari Anyclaw/GitHub, jalankan Ollama dengan OLLAMA_ORIGINS yang mengizinkan origin web app.",
+            "Pastikan Ollama hidup di device ini dan proxy model-server berjalan di port 8080.",
+            `Direct Ollama upstream: ${DIRECT_OLLAMA_ENDPOINT}. Proxy web app: ${LOCAL_OLLAMA_ENDPOINT}.`,
             state.settings.hermesEndpoint ? `Endpoint sekarang: ${state.settings.hermesEndpoint}.` : `Endpoint default: ${LOCAL_OLLAMA_ENDPOINT}.`,
             detail
           ].join(" ");

@@ -8,7 +8,10 @@ const MAX_BODY_BYTES = Number(process.env.MAX_BODY_BYTES || 2 * 1024 * 1024);
 const DEFAULT_NUM_CTX = Number(process.env.HERMES_NUM_CTX || 512);
 const DEFAULT_NUM_THREAD = Number(process.env.HERMES_NUM_THREAD || 2);
 const DEFAULT_NUM_PREDICT = Number(process.env.HERMES_NUM_PREDICT || 256);
-const ALLOWED_ORIGINS = parseOrigins(process.env.CORS_ORIGINS || "https://izrai4103-lgtm.github.io,http://localhost:*,http://127.0.0.1:*");
+const ALLOWED_ORIGINS = parseOrigins(
+  process.env.CORS_ORIGINS ||
+    "https://anyclaw.store,https://*.anyclaw.store,https://izrai4103-lgtm.github.io,https://*.github.io,http://localhost:*,http://127.0.0.1:*"
+);
 
 function trimTrailingSlash(value) {
   return String(value || "").replace(/\/+$/, "");
@@ -41,6 +44,9 @@ function applyCors(req, res) {
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
   res.setHeader("Access-Control-Max-Age", "86400");
+  if (req.headers["access-control-request-private-network"] === "true") {
+    res.setHeader("Access-Control-Allow-Private-Network", "true");
+  }
 }
 
 function sendJson(res, status, payload) {
@@ -123,7 +129,7 @@ const server = http.createServer(async (req, res) => {
       const upstreamJson = upstreamHealth?.ok ? await upstreamHealth.json().catch(() => null) : null;
       sendJson(res, upstreamHealth?.ok ? 200 : 503, {
         ok: Boolean(upstreamHealth?.ok),
-        name: "Passeo Hermes 7B model server",
+        name: "Passeo model server",
         model: DEFAULT_MODEL,
         upstream: UPSTREAM_URL,
         upstreamVersion: upstreamJson?.version || null
@@ -147,5 +153,5 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`Passeo Hermes 7B model server listening on :${PORT}`);
+  console.log(`Passeo model server listening on :${PORT}`);
 });
