@@ -3346,6 +3346,20 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         return shouldUsePublicGemmaEndpoint() ? PUBLIC_GEMMA_ENDPOINT : LOCAL_OLLAMA_ENDPOINT;
       }
 
+      function isLoopbackEndpoint(endpoint = "") {
+        return /\/\/(localhost|127\.0\.0\.1):(8080|11434)\b/i.test(normalizeUrl(endpoint));
+      }
+
+      function effectiveHermesEndpoint(endpoint = state.settings.hermesEndpoint, model = state.settings.hermesModel) {
+        const normalized = normalizeUrl(endpoint || "");
+        if (!LOCAL_DEVICE_MODELS.has(model)) return normalized || DEFAULTS.hermesEndpoint;
+        if (shouldUsePublicGemmaEndpoint() && (!normalized || isLoopbackEndpoint(normalized) || isPlaceholderEndpoint(normalized))) {
+          return PUBLIC_GEMMA_ENDPOINT;
+        }
+        if (/\/\/(localhost|127\.0\.0\.1):11434\b/i.test(normalized)) return LOCAL_OLLAMA_ENDPOINT;
+        return normalized || gemmaDefaultEndpoint();
+      }
+
       function modelDefaultEndpoint(model, currentEndpoint = "") {
         if (model === "openai") return DEFAULTS.hermesEndpoint;
         if (LOCAL_DEVICE_MODELS.has(model)) return gemmaDefaultEndpoint();
@@ -3364,14 +3378,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
           settings.hermesEndpoint = modelDefaultEndpoint(settings.hermesModel, settings.hermesEndpoint);
         }
         if (LOCAL_DEVICE_MODELS.has(settings.hermesModel)) {
-          if (
-            shouldUsePublicGemmaEndpoint() &&
-            /\/\/(localhost|127\.0\.0\.1):(8080|11434)\b/i.test(settings.hermesEndpoint)
-          ) {
-            settings.hermesEndpoint = PUBLIC_GEMMA_ENDPOINT;
-          } else if (/\/\/(localhost|127\.0\.0\.1):11434\b/i.test(settings.hermesEndpoint)) {
-            settings.hermesEndpoint = LOCAL_OLLAMA_ENDPOINT;
-          }
+          settings.hermesEndpoint = effectiveHermesEndpoint(settings.hermesEndpoint, settings.hermesModel);
         }
         if (LOCAL_DEVICE_MODELS.has(settings.hermesModel) && isPlaceholderEndpoint(settings.hermesEndpoint)) {
           settings.hermesEndpoint = gemmaDefaultEndpoint();
@@ -3411,7 +3418,11 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
           state.settings = { ...DEFAULTS, ...savedSettings };
           let shouldSaveSettings = false;
           const hadLegacyRemoteSettings = Object.keys(savedSettings).some((key) => key.toLowerCase().includes("gem" + "ini"));
+          const settingsBeforeNormalize = JSON.stringify(state.settings);
           normalizeHermesSettings(state.settings);
+          if (JSON.stringify(state.settings) !== settingsBeforeNormalize) {
+            shouldSaveSettings = true;
+          }
           if (hadLegacyRemoteSettings) {
             shouldSaveSettings = true;
           }
@@ -3861,7 +3872,10 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
           state.settings.hermesModel = selectedModel;
           const endpointInput = normalizeUrl($("hermesEndpoint").value.trim() || DEFAULTS.hermesEndpoint);
           const endpoint = modelChanged ? modelDefaultEndpoint(selectedModel, endpointInput) : endpointInput;
-          state.settings.hermesEndpoint = isPlaceholderEndpoint(endpoint) ? DEFAULTS.hermesEndpoint : endpoint;
+          state.settings.hermesEndpoint = effectiveHermesEndpoint(
+            isPlaceholderEndpoint(endpoint) ? DEFAULTS.hermesEndpoint : endpoint,
+            selectedModel
+          );
           state.settings.chainOfThoughtForced = $("chainOfThoughtForced").checked;
           state.settings.systemPrompt = $("systemPrompt").value;
         }
@@ -4690,7 +4704,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
       }
 
       function hermesRequestUrl(endpoint = state.settings.hermesEndpoint) {
-        const base = normalizeUrl(endpoint || DEFAULTS.hermesEndpoint);
+        const base = effectiveHermesEndpoint(endpoint || DEFAULTS.hermesEndpoint, state.settings.hermesModel);
         if (isPlaceholderEndpoint(base)) {
           throw new Error(`Endpoint model belum valid. Pakai default ${DEFAULTS.hermesEndpoint}, atau paste URL Colab/VPS yang sudah hidup. ${COLAB_NOTEBOOK_URL}`);
         }
@@ -4780,13 +4794,19 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
 
       async function assertLocalModelReady() {
         if (!LOCAL_DEVICE_MODELS.has(state.settings.hermesModel)) return;
-        const endpoint = normalizeUrl(state.settings.hermesEndpoint || LOCAL_OLLAMA_ENDPOINT);
+        const endpoint = effectiveHermesEndpoint(state.settings.hermesEndpoint || LOCAL_OLLAMA_ENDPOINT, state.settings.hermesModel);
+        if (endpoint !== state.settings.hermesEndpoint) {
+          state.settings.hermesEndpoint = endpoint;
+          saveSettings();
+          writeSettingsToForm();
+        }
         const response = await fetchWithTimeout(joinUrl(endpoint, "/health"), { headers: { Accept: "application/json" } }, HERMES_HEALTH_TIMEOUT_MS)
           .catch((error) => {
             if (error.name === "AbortError") throw error;
             throw new Error([
               "Proxy lokal Gemma belum tersambung.",
-              `Jalankan proxy di ${LOCAL_OLLAMA_ENDPOINT}.`,
+              `Endpoint yang dicoba: ${endpoint}.`,
+              shouldUsePublicGemmaEndpoint() ? "Mode Anyclaw memakai endpoint HTTPS publik, bukan localhost HP." : `Jalankan proxy di ${LOCAL_OLLAMA_ENDPOINT}.`,
               "Gunakan script watch lokal agar server auto-restart.",
               "Kalau app dibuka dari HP, localhost berarti HP itu sendiri; server di mesin lain harus pakai endpoint HTTPS publik.",
               error.message ? `Detail: ${error.message}` : ""
