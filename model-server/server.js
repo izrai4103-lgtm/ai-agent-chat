@@ -1,6 +1,11 @@
 import http from "node:http";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const PORT = Number(process.env.PORT || 8080);
+const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const STATIC_DIR = path.resolve(process.env.STATIC_DIR || path.join(ROOT_DIR, "docs"));
 const DEFAULT_MODEL = process.env.HERMES_MODEL || "nous-hermes:7b";
 const UPSTREAM_URL = trimTrailingSlash(process.env.HERMES_UPSTREAM_URL || "http://ollama:11434");
 const UPSTREAM_MODE = String(process.env.HERMES_UPSTREAM_MODE || "ollama").toLowerCase();
@@ -12,8 +17,21 @@ const UPSTREAM_TIMEOUT_MS = Number(process.env.HERMES_UPSTREAM_TIMEOUT_MS || 900
 const HEALTH_TIMEOUT_MS = Number(process.env.HERMES_HEALTH_TIMEOUT_MS || 5000);
 const ALLOWED_ORIGINS = parseOrigins(
   process.env.CORS_ORIGINS ||
-    "https://anyclaw.store,https://*.anyclaw.store,https://izrai4103-lgtm.github.io,https://*.github.io,http://localhost:*,http://127.0.0.1:*"
+    "https://anyclaw.store,https://*.anyclaw.store,https://*.trycloudflare.com,https://izrai4103-lgtm.github.io,https://*.github.io,http://localhost:*,http://127.0.0.1:*"
 );
+const MIME_TYPES = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".webmanifest": "application/manifest+json; charset=utf-8",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".ico": "image/x-icon",
+  ".txt": "text/plain; charset=utf-8"
+};
 
 function trimTrailingSlash(value) {
   return String(value || "").replace(/\/+$/, "");
@@ -58,6 +76,50 @@ function applyCors(req, res) {
 function sendJson(res, status, payload) {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
   res.end(JSON.stringify(payload));
+}
+
+function sendFile(req, res, filePath) {
+  const contentType = MIME_TYPES[path.extname(filePath).toLowerCase()] || "application/octet-stream";
+  res.writeHead(200, {
+    "Content-Type": contentType,
+    "Cache-Control": filePath.endsWith("index.html") ? "no-store" : "public, max-age=60"
+  });
+  if (req.method === "HEAD") {
+    res.end();
+    return;
+  }
+  fs.createReadStream(filePath).pipe(res);
+}
+
+function serveStatic(req, res, pathname) {
+  let decodedPath = "/";
+  try {
+    decodedPath = decodeURIComponent(pathname || "/");
+  } catch {
+    sendJson(res, 400, { error: "Path tidak valid." });
+    return true;
+  }
+
+  const routePath = decodedPath === "/" ? "/index.html" : decodedPath;
+  const candidate = path.resolve(STATIC_DIR, `.${routePath}`);
+  if (!candidate.startsWith(`${STATIC_DIR}${path.sep}`) && candidate !== STATIC_DIR) {
+    sendJson(res, 403, { error: "Path tidak diizinkan." });
+    return true;
+  }
+
+  if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+    sendFile(req, res, candidate);
+    return true;
+  }
+
+  const fallback = path.join(STATIC_DIR, "index.html");
+  if (fs.existsSync(fallback) && fs.statSync(fallback).isFile()) {
+    sendFile(req, res, fallback);
+    return true;
+  }
+
+  sendJson(res, 404, { error: "Static app tidak ditemukan." });
+  return true;
 }
 
 async function readJsonBody(req) {
@@ -147,7 +209,7 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
 
   try {
-    if (req.method === "GET" && ["/", "/health", "/api/version"].includes(url.pathname)) {
+    if (req.method === "GET" && ["/health", "/api/version"].includes(url.pathname)) {
       const [upstreamHealth, upstreamTags] = await Promise.all([
         fetchWithTimeout(`${UPSTREAM_URL}/api/version`, {}, HEALTH_TIMEOUT_MS).catch(() => null),
         fetchWithTimeout(`${UPSTREAM_URL}/api/tags`, {}, HEALTH_TIMEOUT_MS).catch(() => null)
@@ -176,6 +238,11 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === "POST" && ["/api/chat", "/v1/chat/completions"].includes(url.pathname)) {
       await proxyJson(req, res, url.pathname);
+      return;
+    }
+
+    if (req.method === "GET" || req.method === "HEAD") {
+      serveStatic(req, res, url.pathname);
       return;
     }
 

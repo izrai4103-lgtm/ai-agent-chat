@@ -3334,7 +3334,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
 
       function shouldUsePublicGemmaEndpoint() {
         try {
-          return Boolean(PUBLIC_GEMMA_ENDPOINT) &&
+          return Boolean(hostedGemmaEndpoint()) &&
             location.protocol === "https:" &&
             !/^(localhost|127\.0\.0\.1)$/i.test(location.hostname);
         } catch {
@@ -3342,8 +3342,17 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         }
       }
 
+      function hostedGemmaEndpoint() {
+        try {
+          if (location.protocol === "https:" && /\.trycloudflare\.com$/i.test(location.hostname)) {
+            return location.origin;
+          }
+        } catch {}
+        return PUBLIC_GEMMA_ENDPOINT;
+      }
+
       function gemmaDefaultEndpoint() {
-        return shouldUsePublicGemmaEndpoint() ? PUBLIC_GEMMA_ENDPOINT : LOCAL_OLLAMA_ENDPOINT;
+        return shouldUsePublicGemmaEndpoint() ? hostedGemmaEndpoint() : LOCAL_OLLAMA_ENDPOINT;
       }
 
       function isLoopbackEndpoint(endpoint = "") {
@@ -3354,7 +3363,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         const normalized = normalizeUrl(endpoint || "");
         if (!LOCAL_DEVICE_MODELS.has(model)) return normalized || DEFAULTS.hermesEndpoint;
         if (shouldUsePublicGemmaEndpoint() && (!normalized || isLoopbackEndpoint(normalized) || isPlaceholderEndpoint(normalized))) {
-          return PUBLIC_GEMMA_ENDPOINT;
+          return hostedGemmaEndpoint();
         }
         if (/\/\/(localhost|127\.0\.0\.1):11434\b/i.test(normalized)) return LOCAL_OLLAMA_ENDPOINT;
         return normalized || gemmaDefaultEndpoint();
@@ -4719,7 +4728,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
             "Gemma 2 2B local device belum tersambung.",
             "Pastikan Ollama hidup di device ini dan proxy model-server berjalan di port 8080.",
             "Jika halaman dibuka dari Anyclaw di HP, 127.0.0.1 berarti HP itu sendiri, bukan mesin Codex/VPS.",
-            PUBLIC_GEMMA_ENDPOINT ? `Endpoint publik saat ini: ${PUBLIC_GEMMA_ENDPOINT}.` : "",
+            hostedGemmaEndpoint() ? `Endpoint publik saat ini: ${hostedGemmaEndpoint()}.` : "",
             `Direct Ollama upstream: ${DIRECT_OLLAMA_ENDPOINT}. Proxy web app: ${LOCAL_OLLAMA_ENDPOINT}.`,
             state.settings.hermesEndpoint ? `Endpoint sekarang: ${state.settings.hermesEndpoint}.` : `Endpoint default: ${LOCAL_OLLAMA_ENDPOINT}.`,
             detail
@@ -4803,7 +4812,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         const response = await fetchWithTimeout(joinUrl(endpoint, "/health"), { headers: { Accept: "application/json" } }, HERMES_HEALTH_TIMEOUT_MS)
           .catch((error) => {
             if (error.name === "AbortError") throw error;
-            if (shouldUsePublicGemmaEndpoint() && endpoint === PUBLIC_GEMMA_ENDPOINT) {
+            if (shouldUsePublicGemmaEndpoint() && endpoint === hostedGemmaEndpoint()) {
               setStatus("hermes", "checking", "Health dilewati");
               return null;
             }

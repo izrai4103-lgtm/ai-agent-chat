@@ -8,7 +8,7 @@ PORT="${PORT:-8080}"
 OLLAMA_URL="${HERMES_UPSTREAM_URL:-http://127.0.0.1:11434}"
 WATCH_INTERVAL="${PASSE_WATCH_INTERVAL:-20}"
 LOG_DIR="${PASSE_LOG_DIR:-/tmp}"
-ORIGINS="${CORS_ORIGINS:-https://anyclaw.store,https://*.anyclaw.store,https://izrai4103-lgtm.github.io,https://*.github.io,http://localhost:*,http://127.0.0.1:*}"
+ORIGINS="${CORS_ORIGINS:-https://anyclaw.store,https://*.anyclaw.store,https://*.trycloudflare.com,https://izrai4103-lgtm.github.io,https://*.github.io,http://localhost:*,http://127.0.0.1:*}"
 
 health_ok() {
   curl -m 3 -fsS "$1" >/dev/null 2>&1

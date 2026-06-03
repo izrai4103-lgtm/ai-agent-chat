@@ -18,10 +18,13 @@ https://domain-server-model-kamu.com
 Endpoint yang tersedia:
 
 ```text
+GET  /
 GET  /health
 POST /api/chat
 POST /v1/chat/completions
 ```
+
+`GET /` menyajikan UI chat dari folder `docs/`, jadi tunnel Cloudflare bisa dipakai langsung sebagai app dan API satu-origin.
 
 GitHub Pages tidak menjalankan model. Pages hanya memanggil endpoint HTTPS server ini.
 
