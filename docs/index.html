@@ -3148,7 +3148,13 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
       ];
       const LOCAL_OLLAMA_ENDPOINT = "http://127.0.0.1:8080";
       const DIRECT_OLLAMA_ENDPOINT = "http://127.0.0.1:11434";
+      const PUBLIC_GEMMA_ENDPOINT = "https://res-bold-reveals-emotional.trycloudflare.com";
       const LOCAL_DEVICE_MODELS = new Set(["gemma2:2b"]);
+      const HERMES_HEALTH_TIMEOUT_MS = 5000;
+      const HERMES_LOCAL_CHAT_TIMEOUT_MS = 90000;
+      const HERMES_EXTERNAL_CHAT_TIMEOUT_MS = 45000;
+      const HERMES_TEST_TIMEOUT_MS = 20000;
+      const HERMES_CODE_TIMEOUT_MS = 180000;
 
       const APP_NAME = "Passeo-ai-Agent";
       const BUILTIN_CAPABILITIES = [
@@ -3326,9 +3332,23 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         return /Grok Toxic Edition|toxic fun|sangat blak-blakan|goblok|tolol|bego|ngawur|roasting|sarkastik/i.test(String(value || ""));
       }
 
+      function shouldUsePublicGemmaEndpoint() {
+        try {
+          return Boolean(PUBLIC_GEMMA_ENDPOINT) &&
+            location.protocol === "https:" &&
+            !/^(localhost|127\.0\.0\.1)$/i.test(location.hostname);
+        } catch {
+          return false;
+        }
+      }
+
+      function gemmaDefaultEndpoint() {
+        return shouldUsePublicGemmaEndpoint() ? PUBLIC_GEMMA_ENDPOINT : LOCAL_OLLAMA_ENDPOINT;
+      }
+
       function modelDefaultEndpoint(model, currentEndpoint = "") {
         if (model === "openai") return DEFAULTS.hermesEndpoint;
-        if (LOCAL_DEVICE_MODELS.has(model)) return LOCAL_OLLAMA_ENDPOINT;
+        if (LOCAL_DEVICE_MODELS.has(model)) return gemmaDefaultEndpoint();
         const current = normalizeUrl(currentEndpoint || "");
         return current && !current.includes("pollinations.ai") ? current : LOCAL_OLLAMA_ENDPOINT;
       }
@@ -3343,14 +3363,18 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         if (settings.hermesModel !== "openai" && settings.hermesEndpoint.includes("pollinations.ai")) {
           settings.hermesEndpoint = modelDefaultEndpoint(settings.hermesModel, settings.hermesEndpoint);
         }
-        if (
-          LOCAL_DEVICE_MODELS.has(settings.hermesModel) &&
-          /\/\/(localhost|127\.0\.0\.1):11434\b/i.test(settings.hermesEndpoint)
-        ) {
-          settings.hermesEndpoint = LOCAL_OLLAMA_ENDPOINT;
+        if (LOCAL_DEVICE_MODELS.has(settings.hermesModel)) {
+          if (
+            shouldUsePublicGemmaEndpoint() &&
+            /\/\/(localhost|127\.0\.0\.1):(8080|11434)\b/i.test(settings.hermesEndpoint)
+          ) {
+            settings.hermesEndpoint = PUBLIC_GEMMA_ENDPOINT;
+          } else if (/\/\/(localhost|127\.0\.0\.1):11434\b/i.test(settings.hermesEndpoint)) {
+            settings.hermesEndpoint = LOCAL_OLLAMA_ENDPOINT;
+          }
         }
         if (LOCAL_DEVICE_MODELS.has(settings.hermesModel) && isPlaceholderEndpoint(settings.hermesEndpoint)) {
-          settings.hermesEndpoint = LOCAL_OLLAMA_ENDPOINT;
+          settings.hermesEndpoint = gemmaDefaultEndpoint();
         }
         delete settings["gem" + "iniEndpoint"];
         delete settings["gem" + "iniModel"];
@@ -3362,7 +3386,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
 
       function hermesModelLabel(model = state.settings.hermesModel) {
         if (model === "openai") return "External free model (gpt-oss-20b)";
-        if (model === "gemma2:2b") return "Gemma 2 2B local device";
+        if (model === "gemma2:2b") return "Gemma 2 2B model server";
         return "Hermes hosted 7B (3.8GB)";
       }
 
@@ -4369,7 +4393,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
             ? "# Gemma 2 2B local device via proxy PNA:"
             : "# Endpoint model aktif:",
           state.settings.hermesModel === "gemma2:2b"
-            ? "# Setup: OLLAMA_ORIGINS=\"https://anyclaw.store,https://*.github.io,http://localhost:*\" ollama serve && cd model-server && HERMES_MODEL=gemma2:2b HERMES_UPSTREAM_URL=http://127.0.0.1:11434 PORT=8080 npm start"
+            ? "# Setup: cd model-server && nohup npm run watch:gemma > /tmp/passeo-local-watchdog.log 2>&1 &"
             : "# Pollinations tidak butuh API key; Hermes manual butuh server/Colab hidup.",
           `curl "${hermesRequestUrl(state.settings.hermesEndpoint || DEFAULTS.hermesEndpoint)}" \\`,
           "  -H 'Content-Type: application/json' \\",
@@ -4464,7 +4488,8 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
           await sendHermes7B(tempConversation, tempMessage, {
             systemPrompt: CODE_SYSTEM_PROMPT,
             maxOutputTokens: HERMES_HOSTED_CODE_MAX_OUTPUT_TOKENS,
-            hostedOutputLimit: HERMES_HOSTED_CODE_MAX_OUTPUT_TOKENS
+            hostedOutputLimit: HERMES_HOSTED_CODE_MAX_OUTPUT_TOKENS,
+            timeoutMs: HERMES_CODE_TIMEOUT_MS
           });
           state.codeOutput = tempMessage.content || "";
           state.codeLastLanguage = state.codeLanguage;
@@ -4679,6 +4704,8 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
           return [
             "Gemma 2 2B local device belum tersambung.",
             "Pastikan Ollama hidup di device ini dan proxy model-server berjalan di port 8080.",
+            "Jika halaman dibuka dari Anyclaw di HP, 127.0.0.1 berarti HP itu sendiri, bukan mesin Codex/VPS.",
+            PUBLIC_GEMMA_ENDPOINT ? `Endpoint publik saat ini: ${PUBLIC_GEMMA_ENDPOINT}.` : "",
             `Direct Ollama upstream: ${DIRECT_OLLAMA_ENDPOINT}. Proxy web app: ${LOCAL_OLLAMA_ENDPOINT}.`,
             state.settings.hermesEndpoint ? `Endpoint sekarang: ${state.settings.hermesEndpoint}.` : `Endpoint default: ${LOCAL_OLLAMA_ENDPOINT}.`,
             detail
@@ -4698,6 +4725,80 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
           state.settings.hermesEndpoint ? `Endpoint sekarang: ${state.settings.hermesEndpoint}.` : `Fallback Colab: ${COLAB_NOTEBOOK_URL}`,
           detail
         ].join(" ");
+      }
+
+      function hermesTimeoutMessage(timeoutMs) {
+        const seconds = Math.round(timeoutMs / 1000);
+        if (LOCAL_DEVICE_MODELS.has(state.settings.hermesModel)) {
+          return [
+            `Request lewat ${seconds} detik.`,
+            "Proxy lokal/Gemma 2 2B belum merespons.",
+            `Pastikan endpoint ${LOCAL_OLLAMA_ENDPOINT} hidup di device yang membuka browser, atau pakai endpoint HTTPS publik.`
+          ].join(" ");
+        }
+        return `Request lewat ${seconds} detik. Endpoint model belum merespons.`;
+      }
+
+      function hermesRequestTimeoutMs(options = {}) {
+        const explicit = Number(options.timeoutMs || 0);
+        if (explicit > 0) return explicit;
+        if (options.maxOutputTokens && options.maxOutputTokens >= HERMES_HOSTED_CODE_MAX_OUTPUT_TOKENS) return HERMES_CODE_TIMEOUT_MS;
+        return LOCAL_DEVICE_MODELS.has(state.settings.hermesModel) ? HERMES_LOCAL_CHAT_TIMEOUT_MS : HERMES_EXTERNAL_CHAT_TIMEOUT_MS;
+      }
+
+      async function fetchWithTimeout(url, fetchOptions = {}, timeoutMs = HERMES_EXTERNAL_CHAT_TIMEOUT_MS) {
+        const controller = new AbortController();
+        const sourceSignal = state.abortController?.signal;
+        let timedOut = false;
+        let abortedBySource = false;
+        const abortFromSource = () => {
+          abortedBySource = true;
+          controller.abort();
+        };
+        if (sourceSignal?.aborted) abortFromSource();
+        else if (sourceSignal) sourceSignal.addEventListener("abort", abortFromSource, { once: true });
+        const timer = setTimeout(() => {
+          timedOut = true;
+          controller.abort();
+        }, timeoutMs);
+
+        try {
+          return await fetch(url, { ...fetchOptions, signal: controller.signal });
+        } catch (error) {
+          if (timedOut) {
+            const timeoutError = new Error(hermesTimeoutMessage(timeoutMs));
+            timeoutError.name = "TimeoutError";
+            throw timeoutError;
+          }
+          if (abortedBySource || error.name === "AbortError") throw error;
+          throw error;
+        } finally {
+          clearTimeout(timer);
+          if (sourceSignal) sourceSignal.removeEventListener("abort", abortFromSource);
+        }
+      }
+
+      async function assertLocalModelReady() {
+        if (!LOCAL_DEVICE_MODELS.has(state.settings.hermesModel)) return;
+        const endpoint = normalizeUrl(state.settings.hermesEndpoint || LOCAL_OLLAMA_ENDPOINT);
+        const response = await fetchWithTimeout(joinUrl(endpoint, "/health"), { headers: { Accept: "application/json" } }, HERMES_HEALTH_TIMEOUT_MS)
+          .catch((error) => {
+            if (error.name === "AbortError") throw error;
+            throw new Error([
+              "Proxy lokal Gemma belum tersambung.",
+              `Jalankan proxy di ${LOCAL_OLLAMA_ENDPOINT}.`,
+              "Gunakan script watch lokal agar server auto-restart.",
+              "Kalau app dibuka dari HP, localhost berarti HP itu sendiri; server di mesin lain harus pakai endpoint HTTPS publik.",
+              error.message ? `Detail: ${error.message}` : ""
+            ].filter(Boolean).join(" "));
+          });
+        if (!response.ok) {
+          throw new Error(`Proxy lokal Gemma belum siap. Status ${response.status}.`);
+        }
+        const health = await response.json().catch(() => null);
+        if (health && health.ok === false) {
+          throw new Error(health.detail || "Proxy lokal hidup, tapi model gemma2:2b belum siap.");
+        }
       }
 
       function makeHermesPayload(conversation, systemPrompt = state.settings.systemPrompt, options = {}) {
@@ -4738,16 +4839,16 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         };
       }
 
-      async function postHermesPayload(payload) {
+      async function postHermesPayload(payload, options = {}) {
         try {
-          return await fetch(hermesRequestUrl(), {
+          return await fetchWithTimeout(hermesRequestUrl(), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-            signal: state.abortController?.signal
-          });
+            body: JSON.stringify(payload)
+          }, hermesRequestTimeoutMs(options));
         } catch (error) {
           if (error.name === "AbortError") throw error;
+          if (error.name === "TimeoutError") throw error;
           throw new Error(hermesLocalConnectionMessage(error));
         }
       }
@@ -4758,14 +4859,15 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         assistantMessage.label = APP_NAME;
         render();
         scrollChat();
+        await assertLocalModelReady();
 
-        const response = await postHermesPayload(payload);
+        const response = await postHermesPayload(payload, options);
 
         if (response.ok) {
           const json = await response.json();
           let content = extractHermesText(json);
           if (isModelRefusal(content) && isHarmlessRetryConversation(conversation)) {
-            const retryResponse = await postHermesPayload(makeHermesRecoveryPayload(payload));
+            const retryResponse = await postHermesPayload(makeHermesRecoveryPayload(payload), options);
             if (retryResponse.ok) {
               const retryText = extractHermesText(await retryResponse.json());
               if (retryText && !isModelRefusal(retryText)) content = retryText;
@@ -5008,7 +5110,8 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         try {
           await sendHermes7B(tempConversation, tempMessage, {
             maxOutputTokens: HERMES_HOSTED_TEST_TOKENS,
-            hostedOutputLimit: HERMES_HOSTED_TEST_TOKENS
+            hostedOutputLimit: HERMES_HOSTED_TEST_TOKENS,
+            timeoutMs: HERMES_TEST_TIMEOUT_MS
           });
           setStatus("hermes", "ok", tempMessage.model ? `Online: ${APP_NAME}` : "Online");
           showToast("Endpoint model eksternal tersambung.");

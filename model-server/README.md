@@ -39,3 +39,28 @@ Lalu pakai endpoint:
 ```text
 http://127.0.0.1:8080
 ```
+
+## Local watchdog
+
+Pakai ini agar Ollama dan proxy lokal otomatis dinyalakan lagi kalau prosesnya mati:
+
+```bash
+cd model-server
+nohup npm run watch:gemma > /tmp/passeo-local-watchdog.log 2>&1 &
+```
+
+Cek status:
+
+```bash
+cd model-server
+npm run status:gemma
+```
+
+Jika app dibuka dari Anyclaw/GitHub di HP dan server model berjalan di mesin lain, jangan pakai `localhost` di app. Buat endpoint HTTPS publik:
+
+```bash
+cd model-server
+npm run tunnel:cloudflare
+```
+
+Copy URL `https://...trycloudflare.com` ke endpoint app, atau update `PUBLIC_GEMMA_ENDPOINT` di `index.html`.

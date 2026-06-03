@@ -4,7 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "local:gemma": "bash ./watch-local-gemma.sh once",
+    "watch:gemma": "bash ./watch-local-gemma.sh watch",
+    "status:gemma": "bash ./watch-local-gemma.sh status",
+    "tunnel:cloudflare": "cloudflared tunnel --url http://127.0.0.1:${PORT:-8080} --no-autoupdate"
   },
   "engines": {
     "node": ">=20"

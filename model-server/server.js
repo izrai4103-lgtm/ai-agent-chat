@@ -8,6 +8,8 @@ const MAX_BODY_BYTES = Number(process.env.MAX_BODY_BYTES || 2 * 1024 * 1024);
 const DEFAULT_NUM_CTX = Number(process.env.HERMES_NUM_CTX || 512);
 const DEFAULT_NUM_THREAD = Number(process.env.HERMES_NUM_THREAD || 2);
 const DEFAULT_NUM_PREDICT = Number(process.env.HERMES_NUM_PREDICT || 256);
+const UPSTREAM_TIMEOUT_MS = Number(process.env.HERMES_UPSTREAM_TIMEOUT_MS || 90000);
+const HEALTH_TIMEOUT_MS = Number(process.env.HERMES_HEALTH_TIMEOUT_MS || 5000);
 const ALLOWED_ORIGINS = parseOrigins(
   process.env.CORS_ORIGINS ||
     "https://anyclaw.store,https://*.anyclaw.store,https://izrai4103-lgtm.github.io,https://*.github.io,http://localhost:*,http://127.0.0.1:*"
@@ -30,6 +32,10 @@ function originAllowed(origin) {
     if (pattern === "*") return true;
     if (pattern.endsWith(":*")) {
       return origin.startsWith(pattern.slice(0, -1));
+    }
+    if (pattern.includes("*")) {
+      const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
+      return new RegExp(`^${escaped}$`).test(origin);
     }
     return origin === pattern;
   });
@@ -90,17 +96,34 @@ function upstreamPath(pathname) {
   return UPSTREAM_MODE === "openai" ? "/v1/chat/completions" : "/api/chat";
 }
 
+async function fetchWithTimeout(url, options = {}, timeoutMs = UPSTREAM_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (error) {
+    if (error.name === "AbortError") {
+      const timeoutError = new Error(`Upstream model tidak merespons dalam ${Math.round(timeoutMs / 1000)} detik.`);
+      timeoutError.status = 504;
+      throw timeoutError;
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function proxyJson(req, res, pathname) {
   const payload = normalizeChatPayload(await readJsonBody(req));
   const target = `${UPSTREAM_URL}${upstreamPath(pathname)}`;
-  const upstream = await fetch(target, {
+  const upstream = await fetchWithTimeout(target, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       ...(process.env.HERMES_UPSTREAM_KEY ? { Authorization: `Bearer ${process.env.HERMES_UPSTREAM_KEY}` } : {})
     },
     body: JSON.stringify(payload)
-  });
+  }, UPSTREAM_TIMEOUT_MS);
   const body = await upstream.text();
   const contentType = upstream.headers.get("content-type") || "application/json; charset=utf-8";
   res.writeHead(upstream.status, { "Content-Type": contentType });
@@ -125,14 +148,28 @@ const server = http.createServer(async (req, res) => {
 
   try {
     if (req.method === "GET" && ["/", "/health", "/api/version"].includes(url.pathname)) {
-      const upstreamHealth = await fetch(`${UPSTREAM_URL}/api/version`).catch(() => null);
+      const [upstreamHealth, upstreamTags] = await Promise.all([
+        fetchWithTimeout(`${UPSTREAM_URL}/api/version`, {}, HEALTH_TIMEOUT_MS).catch(() => null),
+        fetchWithTimeout(`${UPSTREAM_URL}/api/tags`, {}, HEALTH_TIMEOUT_MS).catch(() => null)
+      ]);
       const upstreamJson = upstreamHealth?.ok ? await upstreamHealth.json().catch(() => null) : null;
-      sendJson(res, upstreamHealth?.ok ? 200 : 503, {
-        ok: Boolean(upstreamHealth?.ok),
+      const tagsJson = upstreamTags?.ok ? await upstreamTags.json().catch(() => null) : null;
+      const modelLoaded = Array.isArray(tagsJson?.models)
+        ? tagsJson.models.some((model) => model.name === DEFAULT_MODEL || model.model === DEFAULT_MODEL)
+        : false;
+      const ok = Boolean(upstreamHealth?.ok && modelLoaded);
+      sendJson(res, ok ? 200 : 503, {
+        ok,
         name: "Passeo model server",
         model: DEFAULT_MODEL,
+        modelLoaded,
         upstream: UPSTREAM_URL,
-        upstreamVersion: upstreamJson?.version || null
+        upstreamVersion: upstreamJson?.version || null,
+        detail: ok
+          ? null
+          : upstreamHealth?.ok
+            ? `Model ${DEFAULT_MODEL} belum tersedia di Ollama.`
+            : "Ollama upstream belum tersambung."
       });
       return;
     }
