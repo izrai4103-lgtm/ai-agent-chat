@@ -999,6 +999,57 @@
         line-height: 1.55;
       }
 
+      .network-list {
+        display: grid;
+        gap: 2px;
+      }
+
+      .network-item {
+        min-width: 0;
+        display: grid;
+        gap: 5px;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .network-item:last-child {
+        border-bottom: 0;
+      }
+
+      .network-row {
+        min-width: 0;
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .network-item strong {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 950;
+      }
+
+      .network-item small,
+      .network-item code {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .network-item code {
+        display: block;
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      }
+
       .security-box {
         border-color: rgba(245, 158, 11, 0.42);
         background:
@@ -2820,7 +2871,7 @@
           <div class="ops-card">
             <span class="ops-label">Runtime</span>
             <strong id="opsRuntime" class="ops-value">Idle</strong>
-            <small id="opsRuntimeMeta">Hermes standby</small>
+            <small id="opsRuntimeMeta">Pollinations standby</small>
           </div>
           <div class="ops-card">
             <span class="ops-label">Agent</span>
@@ -2872,7 +2923,7 @@
 
           <section id="connectionPanel" class="settings-grid">
             <div class="provider-tabs provider-tabs-single">
-              <button data-provider="hermes" class="active" type="button">Hermes</button>
+              <button data-provider="hermes" class="active" type="button">Pollinations</button>
             </div>
 
             <div class="box security-box">
@@ -2896,23 +2947,31 @@
               <label>
                 <span>Model</span>
                 <select id="hermesModel" class="field">
-                  <option value="openai">Pollinations · external free · gpt-oss-20b</option>
-                  <option value="gemma2:2b">Gemma 2 2B · local device · Ollama</option>
-                  <option value="nous-hermes:7b">nous-hermes:7b · Colab/VPS manual · 3.8GB</option>
+                  <option value="openai-large">GPT-5.4 · epic reasoning · free Pollinations</option>
                 </select>
               </label>
               <label>
-                <span>Server model endpoint</span>
-                <input id="hermesEndpoint" class="field" value="https://text.pollinations.ai/openai" />
+                <span>Pollinations endpoint</span>
+                <input id="hermesEndpoint" class="field" value="https://text.pollinations.ai/openai" readonly />
               </label>
               <p class="note">
-                GitHub Pages memakai endpoint model HTTPS publik. Gemma 2 2B berjalan di model server eksternal.
+                App ini hanya memakai satu model no-key dari Pollinations: openai-large.
               </p>
-              <a class="btn btn-soft" href="https://colab.research.google.com/github/izrai4103-lgtm/ai-agent-chat/blob/main/colab/passeo-hermes-7b-colab.ipynb" target="_blank" rel="noreferrer">Buka Colab model host</a>
               <div style="display:grid;grid-template-columns:1fr auto;gap:8px">
                 <button id="testHermesButton" class="btn btn-primary" type="button">Uji endpoint</button>
                 <button id="saveSettingsButton" class="btn btn-soft" type="button" title="Simpan" aria-label="Simpan">OK</button>
               </div>
+            </div>
+
+            <div class="box">
+              <div class="box-head">
+                <h3>Koneksi & Data</h3>
+                <span id="networkModePill" class="pill"><span class="dot"></span><span>Local</span></span>
+              </div>
+              <div id="networkList" class="network-list" aria-label="Daftar koneksi aplikasi"></div>
+              <p class="note">
+                Riwayat chat, settings, skill aktif, dan Vector DB disimpan lokal di browser. Pesan chat dikirim ke endpoint model yang sedang aktif.
+              </p>
             </div>
 
             <div id="promptBox" class="box sensitive-box">
@@ -2950,14 +3009,14 @@ Aturan utama:
             </div>
             <div class="box">
               <div class="box-head">
-                <h3>Hermes hosted 7B curl</h3>
+                <h3>Pollinations curl</h3>
                 <button class="btn btn-soft copy-button" type="button" data-copy="hermesSnippet">Copy</button>
               </div>
               <pre id="hermesSnippet" class="codebox"></pre>
             </div>
             <div class="box">
               <div class="box-head">
-                <h3>Google Colab model host</h3>
+                <h3>Model gratis aktif</h3>
                 <button class="btn btn-soft copy-button" type="button" data-copy="colabSnippet">Copy</button>
               </div>
               <pre id="colabSnippet" class="codebox"></pre>
@@ -3095,17 +3154,14 @@ Aturan utama:
       const VECTOR_DB_VERSION = 1;
       const VECTOR_STORE = "records";
       const VECTOR_DIMENSIONS = 64;
-      const MAX_HERMES_ATTEMPTS_PER_MESSAGE = 1;
       const HERMES_CONTEXT_MESSAGE_LIMIT = 4;
       const HERMES_CONTEXT_CHAR_LIMIT = 2200;
       const HERMES_SYSTEM_PROMPT_CHAR_LIMIT = 2600;
-      const HERMES_HOSTED_NUM_CTX = 512;
-      const HERMES_HOSTED_NUM_THREAD = 2;
       const HERMES_HOSTED_MAX_OUTPUT_TOKENS = 256;
       const HERMES_HOSTED_CODE_MAX_OUTPUT_TOKENS = 768;
       const HERMES_OPENAI_MAX_OUTPUT_TOKENS = 2048;
       const HERMES_HOSTED_TEST_TOKENS = 8;
-      const COLAB_NOTEBOOK_URL = "https://colab.research.google.com/github/izrai4103-lgtm/ai-agent-chat/blob/main/colab/passeo-hermes-7b-colab.ipynb";
+      const POLLINATIONS_ENDPOINT = "https://text.pollinations.ai/openai";
       const EXPLANATION_REQUEST_PATTERN =
         /\b(jelaskan|jelasin|terangkan|uraikan|rincikan|analisis|analisa|bedah|kenapa|mengapa|kok|alasan|sebab|penyebab|explain|why|reason|analyze|analyse|break down|how come)\b/i;
       const GET_TIME_REQUEST_PATTERN =
@@ -3135,23 +3191,21 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
 
       const DEFAULTS = {
         provider: "hermes",
-        hermesEndpoint: "https://text.pollinations.ai/openai",
-        hermesModel: "openai",
+        hermesEndpoint: POLLINATIONS_ENDPOINT,
+        hermesModel: "openai-large",
         chainOfThoughtForced: true,
         systemPrompt: SYSTEM_PERSONA
       };
 
-      const HERMES_7B_MODELS = [
-        "openai",
-        "gemma2:2b",
-        "nous-hermes:7b"
-      ];
-      const LOCAL_OLLAMA_ENDPOINT = "http://127.0.0.1:8080";
-      const DIRECT_OLLAMA_ENDPOINT = "http://127.0.0.1:11434";
-      const PUBLIC_GEMMA_ENDPOINT = "https://res-bold-reveals-emotional.trycloudflare.com";
-      const LOCAL_DEVICE_MODELS = new Set(["gemma2:2b"]);
-      const HERMES_HEALTH_TIMEOUT_MS = 5000;
-      const HERMES_LOCAL_CHAT_TIMEOUT_MS = 90000;
+      const POLLINATIONS_MODELS = Object.freeze([
+        {
+          id: "openai-large",
+          label: "GPT-5.4",
+          detail: "Most powerful & intelligent Pollinations model",
+          reasoning: true
+        }
+      ]);
+      const HERMES_7B_MODELS = POLLINATIONS_MODELS.map((model) => model.id);
       const HERMES_EXTERNAL_CHAT_TIMEOUT_MS = 45000;
       const HERMES_TEST_TIMEOUT_MS = 20000;
       const HERMES_CODE_TIMEOUT_MS = 180000;
@@ -3321,69 +3375,23 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
       }
 
       function isLegacyUnsafePrompt(value) {
-        return /Grok Toxic Edition|toxic fun|sangat blak-blakan|goblok|tolol|bego|ngawur|roasting|sarkastik/i.test(String(value || ""));
-      }
-
-      function shouldUsePublicGemmaEndpoint() {
-        try {
-          return Boolean(hostedGemmaEndpoint()) &&
-            location.protocol === "https:" &&
-            !/^(localhost|127\.0\.0\.1)$/i.test(location.hostname);
-        } catch {
-          return false;
-        }
-      }
-
-      function hostedGemmaEndpoint() {
-        try {
-          if (location.protocol === "https:" && /\.trycloudflare\.com$/i.test(location.hostname)) {
-            return location.origin;
-          }
-        } catch {}
-        return PUBLIC_GEMMA_ENDPOINT;
-      }
-
-      function gemmaDefaultEndpoint() {
-        return shouldUsePublicGemmaEndpoint() ? hostedGemmaEndpoint() : LOCAL_OLLAMA_ENDPOINT;
-      }
-
-      function isLoopbackEndpoint(endpoint = "") {
-        return /\/\/(localhost|127\.0\.0\.1):(8080|11434)\b/i.test(normalizeUrl(endpoint));
+        return /toxic fun|sangat blak-blakan|goblok|tolol|bego|ngawur|roasting|sarkastik/i.test(String(value || ""));
       }
 
       function effectiveHermesEndpoint(endpoint = state.settings.hermesEndpoint, model = state.settings.hermesModel) {
-        const normalized = normalizeUrl(endpoint || "");
-        if (!LOCAL_DEVICE_MODELS.has(model)) return normalized || DEFAULTS.hermesEndpoint;
-        if (shouldUsePublicGemmaEndpoint() && (!normalized || isLoopbackEndpoint(normalized) || isPlaceholderEndpoint(normalized))) {
-          return hostedGemmaEndpoint();
-        }
-        if (/\/\/(localhost|127\.0\.0\.1):11434\b/i.test(normalized)) return LOCAL_OLLAMA_ENDPOINT;
-        return normalized || gemmaDefaultEndpoint();
+        return POLLINATIONS_ENDPOINT;
       }
 
       function modelDefaultEndpoint(model, currentEndpoint = "") {
-        if (model === "openai") return DEFAULTS.hermesEndpoint;
-        if (LOCAL_DEVICE_MODELS.has(model)) return gemmaDefaultEndpoint();
-        const current = normalizeUrl(currentEndpoint || "");
-        return current && !current.includes("pollinations.ai") ? current : LOCAL_OLLAMA_ENDPOINT;
+        return POLLINATIONS_ENDPOINT;
       }
 
       function normalizeHermesSettings(settings = state.settings) {
         settings.provider = "hermes";
-        const endpoint = normalizeUrl(settings.hermesEndpoint || DEFAULTS.hermesEndpoint);
-        settings.hermesEndpoint = isPlaceholderEndpoint(endpoint) ? DEFAULTS.hermesEndpoint : endpoint;
+        settings.hermesEndpoint = POLLINATIONS_ENDPOINT;
         settings.hermesModel = HERMES_7B_MODELS.includes(settings.hermesModel)
           ? settings.hermesModel
           : DEFAULTS.hermesModel;
-        if (settings.hermesModel !== "openai" && settings.hermesEndpoint.includes("pollinations.ai")) {
-          settings.hermesEndpoint = modelDefaultEndpoint(settings.hermesModel, settings.hermesEndpoint);
-        }
-        if (LOCAL_DEVICE_MODELS.has(settings.hermesModel)) {
-          settings.hermesEndpoint = effectiveHermesEndpoint(settings.hermesEndpoint, settings.hermesModel);
-        }
-        if (LOCAL_DEVICE_MODELS.has(settings.hermesModel) && isPlaceholderEndpoint(settings.hermesEndpoint)) {
-          settings.hermesEndpoint = gemmaDefaultEndpoint();
-        }
         delete settings["gem" + "iniEndpoint"];
         delete settings["gem" + "iniModel"];
         delete settings["gem" + "iniKey"];
@@ -3393,9 +3401,12 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
       }
 
       function hermesModelLabel(model = state.settings.hermesModel) {
-        if (model === "openai") return "External free model (gpt-oss-20b)";
-        if (model === "gemma2:2b") return "Gemma 2 2B model server";
-        return "Hermes hosted 7B (3.8GB)";
+        const item = POLLINATIONS_MODELS.find((entry) => entry.id === model);
+        return item ? `${item.label} · Pollinations` : "Pollinations model";
+      }
+
+      function pollinationsEndpointMessage() {
+        return "Endpoint Pollinations gratis belum tersambung. Coba lagi sebentar; anonymous requests bisa kena antrean atau rate limit.";
       }
 
       function activeConversation() {
@@ -3868,15 +3879,8 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
       function readSettingsFromForm() {
         state.settings.provider = document.querySelector(".provider-tabs button.active")?.dataset.provider || state.settings.provider;
         if (state.settingsUnlocked) {
-          const selectedModel = $("hermesModel").value || DEFAULTS.hermesModel;
-          const modelChanged = selectedModel !== state.settings.hermesModel;
-          state.settings.hermesModel = selectedModel;
-          const endpointInput = normalizeUrl($("hermesEndpoint").value.trim() || DEFAULTS.hermesEndpoint);
-          const endpoint = modelChanged ? modelDefaultEndpoint(selectedModel, endpointInput) : endpointInput;
-          state.settings.hermesEndpoint = effectiveHermesEndpoint(
-            isPlaceholderEndpoint(endpoint) ? DEFAULTS.hermesEndpoint : endpoint,
-            selectedModel
-          );
+          state.settings.hermesModel = DEFAULTS.hermesModel;
+          state.settings.hermesEndpoint = POLLINATIONS_ENDPOINT;
           state.settings.chainOfThoughtForced = $("chainOfThoughtForced").checked;
           state.settings.systemPrompt = $("systemPrompt").value;
         }
@@ -3895,7 +3899,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
       }
 
       function providerLabel(provider = state.settings.provider) {
-        return "Hermes";
+        return "Pollinations";
       }
 
       function assistantLabel() {
@@ -3907,17 +3911,11 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
       }
 
       function activeEndpointLabel() {
-        if (state.settings.hermesModel === "openai") return "External free endpoint";
-        if (LOCAL_DEVICE_MODELS.has(state.settings.hermesModel)) return "Local device Ollama";
-        return "Hermes hosted 7B";
+        return "Pollinations no-key endpoint";
       }
 
       function sanitizeVisibleModelText(value) {
-        const legacyOpenModel = ["Open", "Hermes"].join("");
-        return String(value || "")
-          .replace(new RegExp(`teknium/${legacyOpenModel}-2\\.5-Mistral-7B`, "gi"), "Hermes hosted 7B")
-          .replace(/NousResearch\/Nous-Hermes-2-Mistral-7B-DPO/gi, "Hermes hosted 7B")
-          .replace(new RegExp(`${legacyOpenModel}[^\\n,.;)]*`, "gi"), "Hermes hosted 7B");
+        return String(value || "");
       }
 
       function statusDotClass(status) {
@@ -4317,14 +4315,76 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         $("securityPill").innerHTML = `<span class="${statusDotClass(status)}"></span><span>${status.label}</span>`;
         $("lockSettingsButton").hidden = locked;
         $("securityNote").textContent = unlocked
-          ? "Endpoint model eksternal, uji koneksi, model, chain_of_thought_forced, dan system prompt bisa diedit."
-          : "Klik tombol Set dan masukkan password untuk membuka endpoint model eksternal, uji koneksi, chain_of_thought_forced, dan system prompt.";
+          ? "Kontrol model, endpoint, uji koneksi, chain_of_thought_forced, dan system prompt bisa diedit."
+          : "Password ini hanya lock lokal di browser untuk mencegah edit tidak sengaja; bukan autentikasi server.";
 
         ["hermesModel", "hermesEndpoint", "chainOfThoughtForced", "systemPrompt", "testHermesButton", "saveSettingsButton"].forEach((id) => {
           const element = $(id);
           if (element) element.disabled = locked;
         });
         ["providerBox", "promptBox"].forEach((id) => $(id)?.classList.toggle("is-locked", locked));
+      }
+
+      function endpointKind(endpoint = state.settings.hermesEndpoint) {
+        const normalized = normalizeUrl(endpoint);
+        if (!normalized) return "missing";
+        if (normalized.includes("pollinations.ai")) return "external";
+        if (/\/\/(localhost|127\.0\.0\.1)\b/i.test(normalized)) return "loopback";
+        if (/\.trycloudflare\.com\b/i.test(normalized)) return "tunnel";
+        return "custom";
+      }
+
+      function networkModeStatus() {
+        const endpoint = effectiveHermesEndpoint(state.settings.hermesEndpoint, state.settings.hermesModel);
+        return endpoint ? { state: "checking", label: "No key" } : { state: "bad", label: "Missing" };
+      }
+
+      function networkRows() {
+        const endpoint = effectiveHermesEndpoint(state.settings.hermesEndpoint, state.settings.hermesModel);
+        const endpointDetail = endpoint || DEFAULTS.hermesEndpoint;
+        const mode = hermesEndpointMode(endpoint || state.settings.hermesEndpoint);
+        const rows = [
+          {
+            name: "Chat model",
+            status: `no-key · ${mode}`,
+            detail: `${state.settings.hermesModel} via ${endpointDetail}`
+          },
+          {
+            name: "GitHub API",
+            status: state.skillInstalling ? "dipakai" : "idle",
+            detail: "Dipakai hanya saat install skill dari repo publik."
+          },
+          {
+            name: "Visual CDN",
+            status: "opsional",
+            detail: "Three.js dimuat dari jsDelivr untuk efek WebGL jika browser mendukung."
+          },
+          {
+            name: "Browser storage",
+            status: "lokal",
+            detail: "localStorage untuk chat/settings/skills, IndexedDB untuk Vector DB."
+          }
+        ];
+        return rows;
+      }
+
+      function renderNetworkPanel() {
+        const pill = $("networkModePill");
+        const list = $("networkList");
+        if (!pill || !list) return;
+        const status = networkModeStatus();
+        pill.innerHTML = `<span class="${statusDotClass(status)}"></span><span>${escapeHtml(status.label)}</span>`;
+        list.innerHTML = networkRows()
+          .map((row) => `
+            <div class="network-item">
+              <div class="network-row">
+                <strong>${escapeHtml(row.name)}</strong>
+                <small>${escapeHtml(row.status)}</small>
+              </div>
+              <code title="${escapeHtml(row.detail)}">${escapeHtml(row.detail)}</code>
+            </div>
+          `)
+          .join("");
       }
 
       function renderOpsPanel() {
@@ -4385,6 +4445,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         renderSecurityGate();
         renderOpsPanel();
         renderVectorDbPanel();
+        renderNetworkPanel();
         renderCodePanel();
         renderSkillsPanel();
         updateVoxelMood();
@@ -4405,26 +4466,19 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         ].join("\n");
 
         $("hermesSnippet").textContent = [
-          state.settings.hermesModel === "gemma2:2b"
-            ? "# Gemma 2 2B local device via proxy PNA:"
-            : "# Endpoint model aktif:",
-          state.settings.hermesModel === "gemma2:2b"
-            ? "# Setup: cd model-server && nohup npm run watch:gemma > /tmp/passeo-local-watchdog.log 2>&1 &"
-            : "# Pollinations tidak butuh API key; Hermes manual butuh server/Colab hidup.",
-          `curl "${hermesRequestUrl(state.settings.hermesEndpoint || DEFAULTS.hermesEndpoint)}" \\`,
+          "# Pollinations no-key endpoint:",
+          `curl "${POLLINATIONS_ENDPOINT}" \\`,
           "  -H 'Content-Type: application/json' \\",
-          hermesEndpointMode() === "openai"
-            ? `  -d '{"model":"${state.settings.hermesModel}","stream":false,"messages":[{"role":"user","content":"Halo"}],"max_tokens":64}'`
-            : `  -d '{"model":"${state.settings.hermesModel}","stream":false,"messages":[{"role":"user","content":"Halo"}],"options":{"num_predict":64}}'`
+          `  -d '{"model":"${DEFAULTS.hermesModel}","stream":false,"messages":[{"role":"user","content":"Halo"}],"max_tokens":64}'`
         ].join("\n");
 
         $("colabSnippet").textContent = [
-          "# Google Colab Hermes 7B:",
-          "1. Buka https://colab.research.google.com/github/izrai4103-lgtm/ai-agent-chat/blob/main/colab/passeo-hermes-7b-colab.ipynb",
-          "2. Runtime > Change runtime type > pilih GPU jika tersedia.",
-          "3. Run all. Notebook akan install Ollama, pull nous-hermes:7b, dan start tunnel HTTPS.",
-          "4. Copy URL https://...trycloudflare.com dari output notebook.",
-          "5. Klik Set di app ini, masukkan password, paste URL itu ke Server model endpoint, lalu Uji server 7B."
+          "# Model aktif:",
+          "Provider: Pollinations",
+          "Endpoint: https://text.pollinations.ai/openai",
+          "Model: openai-large",
+          "API key: tidak perlu",
+          "Catatan: request anonymous bisa kena antrean/rate limit saat traffic tinggi."
         ].join("\n");
       }
 
@@ -4699,65 +4753,32 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
       }
 
       function hermesEndpointMode(endpoint = state.settings.hermesEndpoint) {
-        const value = normalizeUrl(endpoint).toLowerCase();
-        if (value.includes("pollinations.ai/openai") || value.endsWith("/openai")) return "openai";
-        if (value.includes("/v1") || value.endsWith("/chat/completions")) return "openai";
-        return "ollama";
+        return "openai";
       }
 
       function hermesRequestUrl(endpoint = state.settings.hermesEndpoint) {
-        const base = effectiveHermesEndpoint(endpoint || DEFAULTS.hermesEndpoint, state.settings.hermesModel);
-        if (isPlaceholderEndpoint(base)) {
-          throw new Error(`Endpoint model belum valid. Pakai default ${DEFAULTS.hermesEndpoint}, atau paste URL Colab/VPS yang sudah hidup. ${COLAB_NOTEBOOK_URL}`);
-        }
-        if (base.endsWith("/openai") || base.endsWith("/api/chat") || base.endsWith("/v1/chat/completions")) return base;
-        return hermesEndpointMode(base) === "openai" ? joinUrl(base, "/chat/completions") : joinUrl(base, "/api/chat");
+        return POLLINATIONS_ENDPOINT;
       }
 
       function hermesLocalConnectionMessage(error = null) {
         const detail = error?.message ? ` Detail: ${error.message}` : "";
-        if (LOCAL_DEVICE_MODELS.has(state.settings.hermesModel)) {
-          return [
-            "Gemma 2 2B local device belum tersambung.",
-            "Buka app dari GitHub Pages. Domain lama sengaja tidak dipakai karena cache-nya bermasalah.",
-            hostedGemmaEndpoint() ? `Endpoint publik saat ini: ${hostedGemmaEndpoint()}.` : "",
-            state.settings.hermesEndpoint ? `Endpoint sekarang: ${state.settings.hermesEndpoint}.` : `Endpoint default: ${LOCAL_OLLAMA_ENDPOINT}.`,
-            detail
-          ].join(" ");
-        }
-        if (state.settings.hermesModel !== "openai") {
-          return [
-            "Server Hermes hosted belum tersambung.",
-            "Pastikan server Colab/VPS hidup, model sudah ter-load, dan endpoint HTTPS benar.",
-            state.settings.hermesEndpoint ? `Endpoint sekarang: ${state.settings.hermesEndpoint}.` : `Fallback Colab: ${COLAB_NOTEBOOK_URL}.`,
-            detail
-          ].join(" ");
-        }
         return [
-          "Endpoint model eksternal belum tersambung.",
-          "Default endpoint eksternal gratis tersedia di https://text.pollinations.ai/openai.",
-          state.settings.hermesEndpoint ? `Endpoint sekarang: ${state.settings.hermesEndpoint}.` : `Fallback Colab: ${COLAB_NOTEBOOK_URL}`,
+          pollinationsEndpointMessage(),
+          `Endpoint: ${POLLINATIONS_ENDPOINT}.`,
           detail
         ].join(" ");
       }
 
       function hermesTimeoutMessage(timeoutMs) {
         const seconds = Math.round(timeoutMs / 1000);
-        if (LOCAL_DEVICE_MODELS.has(state.settings.hermesModel)) {
-          return [
-            `Request lewat ${seconds} detik.`,
-            "Proxy lokal/Gemma 2 2B belum merespons.",
-            `Pastikan endpoint ${LOCAL_OLLAMA_ENDPOINT} hidup di device yang membuka browser, atau pakai endpoint HTTPS publik.`
-          ].join(" ");
-        }
-        return `Request lewat ${seconds} detik. Endpoint model belum merespons.`;
+        return `Request Pollinations lewat ${seconds} detik. Coba lagi sebentar.`;
       }
 
       function hermesRequestTimeoutMs(options = {}) {
         const explicit = Number(options.timeoutMs || 0);
         if (explicit > 0) return explicit;
         if (options.maxOutputTokens && options.maxOutputTokens >= HERMES_HOSTED_CODE_MAX_OUTPUT_TOKENS) return HERMES_CODE_TIMEOUT_MS;
-        return LOCAL_DEVICE_MODELS.has(state.settings.hermesModel) ? HERMES_LOCAL_CHAT_TIMEOUT_MS : HERMES_EXTERNAL_CHAT_TIMEOUT_MS;
+        return HERMES_EXTERNAL_CHAT_TIMEOUT_MS;
       }
 
       async function fetchWithTimeout(url, fetchOptions = {}, timeoutMs = HERMES_EXTERNAL_CHAT_TIMEOUT_MS) {
@@ -4793,46 +4814,15 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
       }
 
       async function assertLocalModelReady() {
-        if (!LOCAL_DEVICE_MODELS.has(state.settings.hermesModel)) return;
-        const endpoint = effectiveHermesEndpoint(state.settings.hermesEndpoint || LOCAL_OLLAMA_ENDPOINT, state.settings.hermesModel);
-        if (endpoint !== state.settings.hermesEndpoint) {
-          state.settings.hermesEndpoint = endpoint;
-          saveSettings();
-          writeSettingsToForm();
-        }
-        const response = await fetchWithTimeout(joinUrl(endpoint, "/health"), { headers: { Accept: "application/json" } }, HERMES_HEALTH_TIMEOUT_MS)
-          .catch((error) => {
-            if (error.name === "AbortError") throw error;
-            if (shouldUsePublicGemmaEndpoint() && endpoint === hostedGemmaEndpoint()) {
-              setStatus("hermes", "checking", "Health dilewati");
-              return null;
-            }
-            throw new Error([
-              "Proxy lokal Gemma belum tersambung.",
-              `Endpoint yang dicoba: ${endpoint}.`,
-              shouldUsePublicGemmaEndpoint() ? "Mode GitHub Pages memakai endpoint HTTPS publik." : `Jalankan proxy di ${LOCAL_OLLAMA_ENDPOINT}.`,
-              "Gunakan GitHub Pages sebagai frontend resmi. Jangan buka domain lama.",
-              error.message ? `Detail: ${error.message}` : ""
-            ].filter(Boolean).join(" "));
-          });
-        if (!response) return;
-        if (!response.ok) {
-          throw new Error(`Proxy lokal Gemma belum siap. Status ${response.status}.`);
-        }
-        const health = await response.json().catch(() => null);
-        if (health && health.ok === false) {
-          throw new Error(health.detail || "Proxy lokal hidup, tapi model gemma2:2b belum siap.");
-        }
+        state.settings.hermesModel = DEFAULTS.hermesModel;
+        state.settings.hermesEndpoint = POLLINATIONS_ENDPOINT;
       }
 
       function makeHermesPayload(conversation, systemPrompt = state.settings.systemPrompt, options = {}) {
         const braintPlan = options.braintPlan || buildBraintPlan(conversation, options);
         const finalSystemPrompt = compactText(composeSystemPrompt(systemPrompt, braintPlan), HERMES_SYSTEM_PROMPT_CHAR_LIMIT);
         const messages = buildHermesMessages(conversation, braintPlan);
-        const isOpenAiMode = hermesEndpointMode() === "openai";
-        const outputTokenLimit = isOpenAiMode
-          ? HERMES_OPENAI_MAX_OUTPUT_TOKENS
-          : options.hostedOutputLimit || HERMES_HOSTED_MAX_OUTPUT_TOKENS;
+        const outputTokenLimit = HERMES_OPENAI_MAX_OUTPUT_TOKENS;
         const requestedMaxOutputTokens = Number(options.maxOutputTokens || braintPlan?.maxOutputTokens || outputTokenLimit);
         const maxOutputTokens = Math.max(1, Math.min(requestedMaxOutputTokens || outputTokenLimit, outputTokenLimit));
         const temperature = options.temperature || braintPlan?.temperature || 0.7;
@@ -4840,26 +4830,12 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
           ? [{ role: "system", content: String(finalSystemPrompt).trim() }]
           : [];
 
-        if (isOpenAiMode) {
-          return {
-            model: state.settings.hermesModel,
-            messages: [...systemMessage, ...messages],
-            temperature,
-            max_tokens: maxOutputTokens,
-            stream: false
-          };
-        }
-
         return {
-          model: state.settings.hermesModel,
+          model: DEFAULTS.hermesModel,
           messages: [...systemMessage, ...messages],
-          stream: false,
-          options: {
-            temperature,
-            num_ctx: HERMES_HOSTED_NUM_CTX,
-            num_predict: maxOutputTokens,
-            num_thread: HERMES_HOSTED_NUM_THREAD
-          }
+          temperature,
+          max_tokens: maxOutputTokens,
+          stream: false
         };
       }
 
@@ -4889,15 +4865,6 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         try {
           response = await postHermesPayload(payload, options);
         } catch (error) {
-          const localFallback = localSafeFallbackAnswer(latestUserContent(conversation));
-          if (LOCAL_DEVICE_MODELS.has(state.settings.hermesModel) && localFallback) {
-            assistantMessage.content = localFallback;
-            assistantMessage.model = `${hermesModelLabel()} fallback`;
-            state.lastLatency = Math.round(performance.now() - startedAt);
-            state.lastModel = assistantMessage.model;
-            setStatus("hermes", "checking", "Fallback lokal");
-            return;
-          }
           throw error;
         }
 
@@ -4923,15 +4890,6 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         }
 
         const apiError = await readApiError(response, hermesModelLabel());
-        const localFallback = localSafeFallbackAnswer(latestUserContent(conversation));
-        if (LOCAL_DEVICE_MODELS.has(state.settings.hermesModel) && localFallback) {
-          assistantMessage.content = localFallback;
-          assistantMessage.model = `${hermesModelLabel()} fallback`;
-          state.lastLatency = Math.round(performance.now() - startedAt);
-          state.lastModel = assistantMessage.model;
-          setStatus("hermes", "checking", "Fallback lokal");
-          return;
-        }
         throw new Error(apiError?.message || `${APP_NAME} request gagal.`);
       }
 
@@ -5006,14 +4964,14 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         detail = sanitizeVisibleModelText(detail);
         const status = response.status;
         const prefix = `${provider} error ${status}`;
-        if (provider.includes("Hermes") && status === 503) {
-          return { status, message: `${prefix}: Engine local sedang sibuk atau belum siap.` };
+        if (status === 503) {
+          return { status, message: `${prefix}: Pollinations sedang penuh atau belum siap.` };
         }
-        if (provider.includes("Hermes") && status === 429) {
-          return { status, message: `${prefix}: Engine local menolak request sementara. Tunggu sebentar lalu coba lagi.` };
+        if (status === 429) {
+          return { status, message: `${prefix}: antrean/rate limit anonymous sedang penuh. Tunggu sebentar lalu coba lagi.` };
         }
-        if (provider.includes("Hermes") && [400, 401, 403].includes(status)) {
-          return { status, message: `${prefix}: Endpoint atau model local tidak valid. Detail: ${detail}` };
+        if ([400, 401, 403].includes(status)) {
+          return { status, message: `${prefix}: request Pollinations ditolak. Detail: ${detail}` };
         }
         return { status, message: `${prefix}: ${detail || response.statusText}` };
       }
@@ -5161,9 +5119,9 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
             timeoutMs: HERMES_TEST_TIMEOUT_MS
           });
           setStatus("hermes", "ok", tempMessage.model ? `Online: ${APP_NAME}` : "Online");
-          showToast("Endpoint model eksternal tersambung.");
+          showToast("Pollinations no-key tersambung.");
         } catch (error) {
-          setStatus("hermes", "bad", state.settings.hermesEndpoint ? "Server off" : "Isi endpoint");
+          setStatus("hermes", "bad", "Offline");
           showToast(error.message.slice(0, 180));
         } finally {
           state.abortController = null;
