@@ -4803,6 +4803,10 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         const response = await fetchWithTimeout(joinUrl(endpoint, "/health"), { headers: { Accept: "application/json" } }, HERMES_HEALTH_TIMEOUT_MS)
           .catch((error) => {
             if (error.name === "AbortError") throw error;
+            if (shouldUsePublicGemmaEndpoint() && endpoint === PUBLIC_GEMMA_ENDPOINT) {
+              setStatus("hermes", "checking", "Health dilewati");
+              return null;
+            }
             throw new Error([
               "Proxy lokal Gemma belum tersambung.",
               `Endpoint yang dicoba: ${endpoint}.`,
@@ -4812,6 +4816,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
               error.message ? `Detail: ${error.message}` : ""
             ].filter(Boolean).join(" "));
           });
+        if (!response) return;
         if (!response.ok) {
           throw new Error(`Proxy lokal Gemma belum siap. Status ${response.status}.`);
         }
@@ -4875,13 +4880,27 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
 
       async function sendHermes7B(conversation, assistantMessage, options = {}) {
         const startedAt = performance.now();
-        const payload = makeHermesPayload(conversation, options.systemPrompt ?? state.settings.systemPrompt, options);
         assistantMessage.label = APP_NAME;
         render();
         scrollChat();
         await assertLocalModelReady();
 
-        const response = await postHermesPayload(payload, options);
+        const payload = makeHermesPayload(conversation, options.systemPrompt ?? state.settings.systemPrompt, options);
+        let response;
+        try {
+          response = await postHermesPayload(payload, options);
+        } catch (error) {
+          const localFallback = localSafeFallbackAnswer(latestUserContent(conversation));
+          if (LOCAL_DEVICE_MODELS.has(state.settings.hermesModel) && localFallback) {
+            assistantMessage.content = localFallback;
+            assistantMessage.model = `${hermesModelLabel()} fallback`;
+            state.lastLatency = Math.round(performance.now() - startedAt);
+            state.lastModel = assistantMessage.model;
+            setStatus("hermes", "checking", "Fallback lokal");
+            return;
+          }
+          throw error;
+        }
 
         if (response.ok) {
           const json = await response.json();
@@ -4905,6 +4924,15 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         }
 
         const apiError = await readApiError(response, hermesModelLabel());
+        const localFallback = localSafeFallbackAnswer(latestUserContent(conversation));
+        if (LOCAL_DEVICE_MODELS.has(state.settings.hermesModel) && localFallback) {
+          assistantMessage.content = localFallback;
+          assistantMessage.model = `${hermesModelLabel()} fallback`;
+          state.lastLatency = Math.round(performance.now() - startedAt);
+          state.lastModel = assistantMessage.model;
+          setStatus("hermes", "checking", "Fallback lokal");
+          return;
+        }
         throw new Error(apiError?.message || `${APP_NAME} request gagal.`);
       }
 
