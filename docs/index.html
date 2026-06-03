@@ -3162,6 +3162,10 @@ Aturan utama:
       const HERMES_OPENAI_MAX_OUTPUT_TOKENS = 2048;
       const HERMES_HOSTED_TEST_TOKENS = 8;
       const POLLINATIONS_ENDPOINT = "https://text.pollinations.ai/openai";
+      const POLLINATIONS_RETRY_STATUSES = new Set([429, 502, 503, 504]);
+      const POLLINATIONS_MAX_RETRIES = 6;
+      const POLLINATIONS_RETRY_DELAYS = [3500, 6000, 10000, 16000, 24000, 32000];
+      const POLLINATIONS_FAST_FALLBACK_TIMEOUT_MS = 8000;
       const EXPLANATION_REQUEST_PATTERN =
         /\b(jelaskan|jelasin|terangkan|uraikan|rincikan|analisis|analisa|bedah|kenapa|mengapa|kok|alasan|sebab|penyebab|explain|why|reason|analyze|analyse|break down|how come)\b/i;
       const GET_TIME_REQUEST_PATTERN =
@@ -4839,18 +4843,46 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         };
       }
 
+      function isRetryablePollinationsStatus(status) {
+        return POLLINATIONS_RETRY_STATUSES.has(Number(status));
+      }
+
+      function retryAfterDelayMs(response, attempt) {
+        const retryAfter = Number(response.headers.get("retry-after") || 0);
+        if (retryAfter > 0) return Math.min(retryAfter * 1000, 45000);
+        return POLLINATIONS_RETRY_DELAYS[Math.min(attempt, POLLINATIONS_RETRY_DELAYS.length - 1)];
+      }
+
+      function pollinationsRetryMessage(response, attempt, delayMs) {
+        const seconds = Math.max(1, Math.round(delayMs / 1000));
+        const triesLeft = Math.max(0, POLLINATIONS_MAX_RETRIES - attempt);
+        return `Pollinations no-key sedang penuh (${response.status}). Mencoba ulang dalam ${seconds} detik. Sisa percobaan: ${triesLeft}.`;
+      }
+
       async function postHermesPayload(payload, options = {}) {
+        const maxRetries = Math.max(0, Number(options.maxRetries ?? POLLINATIONS_MAX_RETRIES));
         try {
-          return await fetchWithTimeout(hermesRequestUrl(), {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-          }, hermesRequestTimeoutMs(options));
+          for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+            const response = await fetchWithTimeout(hermesRequestUrl(), {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload)
+            }, hermesRequestTimeoutMs(options));
+
+            if (!isRetryablePollinationsStatus(response.status) || attempt >= maxRetries) return response;
+
+            const delayMs = retryAfterDelayMs(response, attempt);
+            if (typeof options.onRetry === "function") {
+              options.onRetry({ response, attempt: attempt + 1, maxRetries, delayMs });
+            }
+            await sleepWithAbort(delayMs);
+          }
         } catch (error) {
           if (error.name === "AbortError") throw error;
           if (error.name === "TimeoutError") throw error;
           throw new Error(hermesLocalConnectionMessage(error));
         }
+        throw new Error(hermesLocalConnectionMessage());
       }
 
       async function sendHermes7B(conversation, assistantMessage, options = {}) {
@@ -4861,11 +4893,32 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         await assertLocalModelReady();
 
         const payload = makeHermesPayload(conversation, options.systemPrompt ?? state.settings.systemPrompt, options);
+        const latestUserText = latestUserContent(conversation);
+        const canUseFastFallback = Boolean(localSafeFallbackAnswer(latestUserText, true));
         let response;
         try {
-          response = await postHermesPayload(payload, options);
+          response = await postHermesPayload(payload, {
+            ...options,
+            ...(canUseFastFallback ? {
+              maxRetries: 0,
+              timeoutMs: Math.min(Number(options.timeoutMs || POLLINATIONS_FAST_FALLBACK_TIMEOUT_MS), POLLINATIONS_FAST_FALLBACK_TIMEOUT_MS)
+            } : {}),
+            onRetry: ({ response: retryResponse, attempt, maxRetries, delayMs }) => {
+              assistantMessage.content = pollinationsRetryMessage(retryResponse, attempt, delayMs);
+              assistantMessage.pending = true;
+              setStatus("hermes", "checking", `Retry ${attempt}/${maxRetries}`);
+              scrollChat();
+            }
+          });
         } catch (error) {
-          throw error;
+          const fallback = localSafeFallbackAnswer(latestUserText, true);
+          if (!fallback) throw error;
+          assistantMessage.content = fallback;
+          assistantMessage.model = `${hermesModelLabel()} fallback`;
+          state.lastLatency = Math.round(performance.now() - startedAt);
+          state.lastModel = hermesModelLabel();
+          setStatus("hermes", "checking", "Fallback");
+          return;
         }
 
         if (response.ok) {
@@ -4890,6 +4943,15 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         }
 
         const apiError = await readApiError(response, hermesModelLabel());
+        const fallback = localSafeFallbackAnswer(latestUserText, isRetryablePollinationsStatus(apiError?.status));
+        if (fallback) {
+          assistantMessage.content = fallback;
+          assistantMessage.model = `${hermesModelLabel()} fallback`;
+          state.lastLatency = Math.round(performance.now() - startedAt);
+          state.lastModel = hermesModelLabel();
+          setStatus("hermes", "checking", "Fallback");
+          return;
+        }
         throw new Error(apiError?.message || `${APP_NAME} request gagal.`);
       }
 
@@ -4921,9 +4983,12 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         return true;
       }
 
-      function localSafeFallbackAnswer(value) {
+      function localSafeFallbackAnswer(value, providerBusy = false) {
         const text = String(value || "").trim();
         if (/^(halo|hai|hi|hello|p|yo|tes|test)\b/i.test(text)) {
+          if (providerBusy) {
+            return "Halo, aku Passeo-ai-Agent. Pollinations no-key sedang padat, tapi chat sudah aktif. Kirim tugas atau pertanyaanmu, lalu aku akan coba lewat model lagi.";
+          }
           return "Halo, aku Passeo-ai-Agent. Ada yang mau kamu kerjakan?";
         }
         return "";
@@ -5023,6 +5088,34 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
 
       function sleep(ms) {
         return new Promise((resolve) => setTimeout(resolve, ms));
+      }
+
+      function sleepWithAbort(ms) {
+        const signal = state.abortController?.signal;
+        if (!signal) return sleep(ms);
+        if (signal.aborted) return Promise.reject(makeAbortError());
+        return new Promise((resolve, reject) => {
+          const timer = setTimeout(done, ms);
+          function done() {
+            cleanup();
+            resolve();
+          }
+          function abort() {
+            cleanup();
+            reject(makeAbortError());
+          }
+          function cleanup() {
+            clearTimeout(timer);
+            signal.removeEventListener("abort", abort);
+          }
+          signal.addEventListener("abort", abort, { once: true });
+        });
+      }
+
+      function makeAbortError() {
+        const error = new Error("Aborted");
+        error.name = "AbortError";
+        return error;
       }
 
       async function sendMessage() {

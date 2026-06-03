@@ -34,6 +34,7 @@ gh repo create ai-agent-chat --public --source=. --remote=origin --push
 In GitHub, enable Pages with **Build and deployment: Deploy from a branch**, then select branch `main` and folder `/docs`.
 
 No model API key is committed or required for the Pollinations endpoint used by the app.
+Anonymous Pollinations requests can queue or rate-limit during high traffic; the app automatically retries temporary `429`, `502`, `503`, and `504` responses before showing an error.
 
 ## TikTok LIVE Connector
 
