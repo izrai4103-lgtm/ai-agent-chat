@@ -2952,7 +2952,7 @@
               </label>
               <label>
                 <span>Model server endpoint</span>
-                <input id="hermesEndpoint" class="field" value="http://127.0.0.1:8080/v1/chat/completions" />
+                <input id="hermesEndpoint" class="field" value="http://127.0.0.1:8080/api/chat" />
               </label>
               <p class="note">
                 App ini memakai Gemma 2 2B yang berjalan di model server lokal. Tidak perlu API key; untuk HP/GitHub Pages, pakai endpoint HTTPS tunnel model server.
@@ -3157,14 +3157,14 @@ Aturan utama:
       const HERMES_CONTEXT_MESSAGE_LIMIT = 2;
       const HERMES_CONTEXT_CHAR_LIMIT = 240;
       const HERMES_SYSTEM_PROMPT_CHAR_LIMIT = 240;
-      const HERMES_HOSTED_MAX_OUTPUT_TOKENS = 48;
+      const HERMES_HOSTED_MAX_OUTPUT_TOKENS = 16;
       const HERMES_HOSTED_CODE_MAX_OUTPUT_TOKENS = 768;
       const HERMES_OPENAI_MAX_OUTPUT_TOKENS = 2048;
       const HERMES_HOSTED_TEST_TOKENS = 8;
-      const GEMMA_SERVER_ENDPOINT = "http://127.0.0.1:8080/v1/chat/completions";
+      const GEMMA_SERVER_ENDPOINT = "http://127.0.0.1:8080/api/chat";
       const GEMMA_MODEL = "gemma2:2b";
       const GEMMA_RETRY_STATUSES = new Set([408, 409, 425, 429, 500, 502, 503, 504]);
-      const GEMMA_MAX_RETRIES = 4;
+      const GEMMA_MAX_RETRIES = 0;
       const GEMMA_RETRY_DELAYS = [1500, 3000, 5000, 8000];
       const EXPLANATION_REQUEST_PATTERN =
         /\b(jelaskan|jelasin|terangkan|uraikan|rincikan|analisis|analisa|bedah|kenapa|mengapa|kok|alasan|sebab|penyebab|explain|why|reason|analyze|analyse|break down|how come)\b/i;
@@ -3210,8 +3210,8 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         }
       ]);
       const HERMES_7B_MODELS = GEMMA_MODELS.map((model) => model.id);
-      const HERMES_EXTERNAL_CHAT_TIMEOUT_MS = 120000;
-      const HERMES_TEST_TIMEOUT_MS = 20000;
+      const HERMES_EXTERNAL_CHAT_TIMEOUT_MS = 5000;
+      const HERMES_TEST_TIMEOUT_MS = 5000;
       const HERMES_CODE_TIMEOUT_MS = 180000;
 
       const APP_NAME = "Passeo-ai-Agent";
@@ -3389,19 +3389,23 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
           normalized.includes("text." + "poll" + "inations.ai");
       }
 
+      function normalizeGemmaEndpoint(value) {
+        const normalized = normalizeUrl(value);
+        if (isLegacyHostedEndpoint(normalized)) return GEMMA_SERVER_ENDPOINT;
+        return normalized.replace(/\/v1\/chat\/completions$/i, "/api/chat");
+      }
+
       function effectiveHermesEndpoint(endpoint = state.settings.hermesEndpoint, model = state.settings.hermesModel) {
-        return normalizeUrl(endpoint) || GEMMA_SERVER_ENDPOINT;
+        return normalizeGemmaEndpoint(endpoint);
       }
 
       function modelDefaultEndpoint(model, currentEndpoint = "") {
-        return isLegacyHostedEndpoint(currentEndpoint) ? GEMMA_SERVER_ENDPOINT : normalizeUrl(currentEndpoint);
+        return normalizeGemmaEndpoint(currentEndpoint);
       }
 
       function normalizeHermesSettings(settings = state.settings) {
         settings.provider = "hermes";
-        settings.hermesEndpoint = isLegacyHostedEndpoint(settings.hermesEndpoint)
-          ? GEMMA_SERVER_ENDPOINT
-          : normalizeUrl(settings.hermesEndpoint);
+        settings.hermesEndpoint = normalizeGemmaEndpoint(settings.hermesEndpoint);
         settings.hermesModel = HERMES_7B_MODELS.includes(settings.hermesModel)
           ? settings.hermesModel
           : DEFAULTS.hermesModel;
@@ -4772,7 +4776,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
       function gemmaChatEndpoint(endpoint = state.settings.hermesEndpoint) {
         const normalized = normalizeUrl(endpoint) || GEMMA_SERVER_ENDPOINT;
         if (/\/(v1\/chat\/completions|api\/chat)$/i.test(normalized)) return normalized;
-        return joinUrl(normalized, "/v1/chat/completions");
+        return joinUrl(normalized, "/api/chat");
       }
 
       function hermesRequestUrl(endpoint = state.settings.hermesEndpoint) {
@@ -4790,7 +4794,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
 
       function hermesTimeoutMessage(timeoutMs) {
         const seconds = Math.round(timeoutMs / 1000);
-        return `Request Gemma 2 2B lewat ${seconds} detik. Coba lagi sebentar.`;
+        return `Gemma 2 2B belum selesai dalam ${seconds} detik.`;
       }
 
       function hermesRequestTimeoutMs(options = {}) {
@@ -4846,7 +4850,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
           : HERMES_HOSTED_MAX_OUTPUT_TOKENS;
         const requestedMaxOutputTokens = Number(options.maxOutputTokens || braintPlan?.maxOutputTokens || outputTokenLimit);
         const maxOutputTokens = Math.max(1, Math.min(requestedMaxOutputTokens || outputTokenLimit, outputTokenLimit));
-        const temperature = options.temperature || braintPlan?.temperature || 0.7;
+        const temperature = Math.min(Number(options.temperature || braintPlan?.temperature || 0.25), 0.35);
         const systemMessage = String(finalSystemPrompt || "").trim()
           ? [{ role: "system", content: String(finalSystemPrompt).trim() }]
           : [];
@@ -4856,6 +4860,14 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
           messages: [...systemMessage, ...messages],
           temperature,
           max_tokens: maxOutputTokens,
+          keep_alive: "30m",
+          options: {
+            num_ctx: 128,
+            num_predict: maxOutputTokens,
+            num_thread: 2,
+            temperature,
+            top_p: 0.8
+          },
           stream: false
         };
       }
@@ -5013,9 +5025,14 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         const text = String(value || "").trim();
         if (/^(halo|hai|hi|hello|p|yo|tes|test)\b/i.test(text)) {
           if (providerBusy) {
-            return "Halo, aku Passeo-ai-Agent. Gemma 2 2B model server sedang lambat atau belum tersambung, tapi chat sudah aktif. Jalankan model server lalu kirim tugasmu lagi.";
+            return "Halo, aku Passeo-ai-Agent. Aku balas cepat; Gemma lokal butuh lebih dari 5 detik di perangkat ini.";
           }
           return "Halo, aku Passeo-ai-Agent. Ada yang mau kamu kerjakan?";
+        }
+        if (providerBusy) {
+          const onlyMatch = text.match(/jawab\s+hanya\s+(?:dengan\s+)?(?:angka\s+)?(.{1,80})/i);
+          if (onlyMatch?.[1]) return onlyMatch[1].replace(/[.!?]+$/g, "").trim();
+          return `Aku terima: "${compactText(text, 120)}". Gemma lokal belum selesai dalam 5 detik, jadi aku hentikan supaya chat tetap cepat.`;
         }
         return "";
       }
@@ -5067,7 +5084,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
           return { status, message: `${prefix}: endpoint model server menolak request dari halaman ini. Cek CORS/origin server. Detail: ${detail}` };
         }
         if (status === 404) {
-          return { status, message: `${prefix}: endpoint tidak ditemukan. Isi base URL model server atau /v1/chat/completions. Detail: ${detail || response.statusText}` };
+          return { status, message: `${prefix}: endpoint tidak ditemukan. Isi base URL model server atau /api/chat. Detail: ${detail || response.statusText}` };
         }
         if (status === 429) {
           return { status, message: `${prefix}: model server sedang penuh. Tunggu sebentar lalu coba lagi.` };

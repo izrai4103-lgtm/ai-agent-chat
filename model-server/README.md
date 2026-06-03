@@ -48,8 +48,10 @@ http://127.0.0.1:8080
 Endpoint chat no-key:
 
 ```text
-http://127.0.0.1:8080/v1/chat/completions
+http://127.0.0.1:8080/api/chat
 ```
+
+Default proxy disetel untuk respons cepat: `HERMES_NUM_CTX=128`, `HERMES_NUM_PREDICT=16`, dan `HERMES_UPSTREAM_TIMEOUT_MS=4500`. Jika butuh jawaban lebih panjang, naikkan env tersebut, tetapi respons bisa melewati 5 detik di CPU.
 
 ## Hugging Face Transformers lokal
 

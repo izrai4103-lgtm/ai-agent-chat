@@ -10,10 +10,10 @@ const DEFAULT_MODEL = process.env.HERMES_MODEL || "gemma2:2b";
 const UPSTREAM_URL = trimTrailingSlash(process.env.HERMES_UPSTREAM_URL || "http://ollama:11434");
 const UPSTREAM_MODE = String(process.env.HERMES_UPSTREAM_MODE || "ollama").toLowerCase();
 const MAX_BODY_BYTES = Number(process.env.MAX_BODY_BYTES || 2 * 1024 * 1024);
-const DEFAULT_NUM_CTX = Number(process.env.HERMES_NUM_CTX || 512);
+const DEFAULT_NUM_CTX = Number(process.env.HERMES_NUM_CTX || 128);
 const DEFAULT_NUM_THREAD = Number(process.env.HERMES_NUM_THREAD || 2);
-const DEFAULT_NUM_PREDICT = Number(process.env.HERMES_NUM_PREDICT || 256);
-const UPSTREAM_TIMEOUT_MS = Number(process.env.HERMES_UPSTREAM_TIMEOUT_MS || 90000);
+const DEFAULT_NUM_PREDICT = Number(process.env.HERMES_NUM_PREDICT || 16);
+const UPSTREAM_TIMEOUT_MS = Number(process.env.HERMES_UPSTREAM_TIMEOUT_MS || 4500);
 const HEALTH_TIMEOUT_MS = Number(process.env.HERMES_HEALTH_TIMEOUT_MS || 5000);
 const ALLOWED_ORIGINS = parseOrigins(
   process.env.CORS_ORIGINS ||
@@ -143,6 +143,7 @@ function normalizeChatPayload(payload) {
     ...payload,
     model: payload.model || DEFAULT_MODEL,
     stream: false,
+    keep_alive: payload.keep_alive || "30m",
     options: {
       num_ctx: DEFAULT_NUM_CTX,
       num_predict: DEFAULT_NUM_PREDICT,

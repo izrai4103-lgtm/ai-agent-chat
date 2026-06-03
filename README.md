@@ -2,7 +2,7 @@
 
 Static GitHub Pages app for chatting with Passeo-ai-Agent through one no-key local Gemma 2 2B model server:
 
-- Default endpoint: `http://127.0.0.1:8080/v1/chat/completions`
+- Default endpoint: `http://127.0.0.1:8080/api/chat`
 - Model: `gemma2:2b`
 - API key: not required
 
@@ -53,6 +53,7 @@ gh repo create ai-agent-chat --public --source=. --remote=origin --push
 In GitHub, enable Pages with **Build and deployment: Deploy from a branch**, then select branch `main` and folder `/docs`.
 
 No model API key is committed or required. Temporary model-server responses such as `408`, `409`, `425`, `429`, `500`, `502`, `503`, and `504` are retried before showing an error.
+Chat UI uses a 5-second response budget. If local Gemma 2 2B on CPU cannot finish in time, the app returns a fast local fallback instead of leaving the user waiting.
 
 ## TikTok LIVE Connector
 
