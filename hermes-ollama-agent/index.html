@@ -2906,7 +2906,7 @@
                 <input id="hermesEndpoint" class="field" value="https://text.pollinations.ai/openai" />
               </label>
               <p class="note">
-                Pollinations memakai endpoint eksternal. Gemma 2 2B memakai proxy lokal 127.0.0.1:8080 ke Ollama device ini. Untuk Hermes 7B manual, pakai Colab/VPS lalu paste URL servernya.
+                GitHub Pages memakai endpoint model HTTPS publik. Gemma 2 2B berjalan di model server eksternal.
               </p>
               <a class="btn btn-soft" href="https://colab.research.google.com/github/izrai4103-lgtm/ai-agent-chat/blob/main/colab/passeo-hermes-7b-colab.ipynb" target="_blank" rel="noreferrer">Buka Colab model host</a>
               <div style="display:grid;grid-template-columns:1fr auto;gap:8px">
@@ -3189,14 +3189,6 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
           name: "Android Device Access",
           description: "Access camera, microphone, calendar, location, clipboard, notifications, battery, contacts, SMS, and Android intents.",
           prompt: "Skill Android Device Access aktif. Jika user meminta akses perangkat, jelaskan batasan browser statis dan beri langkah implementasi Android/Termux yang aman."
-        },
-        {
-          id: "skill-anyclaw-publish",
-          kind: "skill",
-          source: "USER",
-          name: "anyclaw-publish",
-          description: "Build and publish beautiful web apps to Anyclaw hosting using a REST API.",
-          prompt: "Skill anyclaw-publish aktif, tetapi project ini diarahkan ke GitHub Pages kecuali user eksplisit meminta Anyclaw."
         },
         {
           id: "skill-composio-cli",
@@ -4407,8 +4399,9 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
           "gh repo create ai-agent-chat --public --source=. --remote=origin --push",
           "",
           "# GitHub Pages:",
-          "# Settings > Pages > Build and deployment > GitHub Actions",
-          "# Workflow sudah tersedia di .github/workflows/pages.yml"
+          "# Settings > Pages > Deploy from branch",
+          "# Branch: main",
+          "# Folder: /docs"
         ].join("\n");
 
         $("hermesSnippet").textContent = [
@@ -4726,10 +4719,8 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         if (LOCAL_DEVICE_MODELS.has(state.settings.hermesModel)) {
           return [
             "Gemma 2 2B local device belum tersambung.",
-            "Pastikan Ollama hidup di device ini dan proxy model-server berjalan di port 8080.",
-            "Jika halaman dibuka dari Anyclaw di HP, 127.0.0.1 berarti HP itu sendiri, bukan mesin Codex/VPS.",
+            "Buka app dari GitHub Pages. Domain lama sengaja tidak dipakai karena cache-nya bermasalah.",
             hostedGemmaEndpoint() ? `Endpoint publik saat ini: ${hostedGemmaEndpoint()}.` : "",
-            `Direct Ollama upstream: ${DIRECT_OLLAMA_ENDPOINT}. Proxy web app: ${LOCAL_OLLAMA_ENDPOINT}.`,
             state.settings.hermesEndpoint ? `Endpoint sekarang: ${state.settings.hermesEndpoint}.` : `Endpoint default: ${LOCAL_OLLAMA_ENDPOINT}.`,
             detail
           ].join(" ");
@@ -4819,9 +4810,8 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
             throw new Error([
               "Proxy lokal Gemma belum tersambung.",
               `Endpoint yang dicoba: ${endpoint}.`,
-              shouldUsePublicGemmaEndpoint() ? "Mode Anyclaw memakai endpoint HTTPS publik, bukan localhost HP." : `Jalankan proxy di ${LOCAL_OLLAMA_ENDPOINT}.`,
-              "Gunakan script watch lokal agar server auto-restart.",
-              "Kalau app dibuka dari HP, localhost berarti HP itu sendiri; server di mesin lain harus pakai endpoint HTTPS publik.",
+              shouldUsePublicGemmaEndpoint() ? "Mode GitHub Pages memakai endpoint HTTPS publik." : `Jalankan proxy di ${LOCAL_OLLAMA_ENDPOINT}.`,
+              "Gunakan GitHub Pages sebagai frontend resmi. Jangan buka domain lama.",
               error.message ? `Detail: ${error.message}` : ""
             ].filter(Boolean).join(" "));
           });

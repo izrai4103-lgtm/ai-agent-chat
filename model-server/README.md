@@ -28,12 +28,14 @@ POST /v1/chat/completions
 
 GitHub Pages tidak menjalankan model. Pages hanya memanggil endpoint HTTPS server ini.
 
-## Local Gemma 2 2B proxy
+## GitHub Pages + Gemma 2 2B model server
 
-Untuk app HTTPS dari Anyclaw/GitHub yang memanggil Ollama di device ini, jalankan proxy lokal ini supaya preflight Private Network Access dari Chrome lolos:
+Frontend resmi dipakai dari GitHub Pages. Model tetap berjalan di model server ini dan dibuka lewat endpoint HTTPS publik/tunnel.
+
+Jalankan proxy lokal ini:
 
 ```bash
-OLLAMA_ORIGINS="https://anyclaw.store,https://*.github.io,http://localhost:*" ollama serve
+OLLAMA_ORIGINS="https://*.github.io,http://localhost:*" ollama serve
 HERMES_MODEL=gemma2:2b HERMES_UPSTREAM_URL=http://127.0.0.1:11434 PORT=8080 npm start
 ```
 
@@ -59,7 +61,7 @@ cd model-server
 npm run status:gemma
 ```
 
-Jika app dibuka dari Anyclaw/GitHub di HP dan server model berjalan di mesin lain, jangan pakai `localhost` di app. Buat endpoint HTTPS publik:
+Jika app dibuka dari GitHub Pages di HP dan server model berjalan di mesin lain, jangan pakai `localhost` di app. Buat endpoint HTTPS publik:
 
 ```bash
 cd model-server
