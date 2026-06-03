@@ -26,6 +26,11 @@ services:
       HERMES_NUM_THREAD: "2"
       HERMES_NUM_PREDICT: "16"
       HERMES_UPSTREAM_TIMEOUT_MS: "4500"
+      # Optional legal fast endpoint for real answers under 5 seconds.
+      # HERMES_FAST_UPSTREAM_URL: "https://api.groq.com/openai/v1"
+      # HERMES_FAST_MODEL: "llama-3.1-8b-instant"
+      # HERMES_FAST_UPSTREAM_KEY: "${HERMES_FAST_UPSTREAM_KEY}"
+      # HERMES_FAST_PRIMARY: "1"
       CORS_ORIGINS: "https://izrai4103-lgtm.github.io,http://localhost:*,http://127.0.0.1:*"
     ports:
       - "8080:8080"

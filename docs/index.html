@@ -6,7 +6,7 @@
     <title>Passeo-ai-Agent</title>
     <meta
       name="description"
-      content="Local no-key AI chat agent with Gemma 2 2B."
+      content="No-key AI chat agent with Qwen3.6 Flash through Puter.js."
     />
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
     <style>
@@ -2842,7 +2842,7 @@
           <div style="display:flex;gap:8px">
             <button id="downloadButton" class="btn btn-soft btn-icon" type="button" title="Ekspor chat" aria-label="Ekspor chat">DL</button>
             <button id="deleteButton" class="btn btn-soft btn-icon" type="button" title="Hapus chat" aria-label="Hapus chat">×</button>
-            <a class="btn btn-soft btn-icon" href="https://huggingface.co/google/gemma-2-2b-it" target="_blank" rel="noreferrer" title="Gemma 2 2B model" aria-label="Gemma 2 2B model">?</a>
+            <a class="btn btn-soft btn-icon" href="https://developer.puter.com/ai/qwen/qwen3.6-flash/" target="_blank" rel="noreferrer" title="Qwen3.6 Flash model" aria-label="Qwen3.6 Flash model">?</a>
           </div>
         </footer>
       </aside>
@@ -2871,7 +2871,7 @@
           <div class="ops-card">
             <span class="ops-label">Runtime</span>
             <strong id="opsRuntime" class="ops-value">Idle</strong>
-            <small id="opsRuntimeMeta">Gemma local standby</small>
+            <small id="opsRuntimeMeta">Puter no-key standby</small>
           </div>
           <div class="ops-card">
             <span class="ops-label">Agent</span>
@@ -2923,7 +2923,7 @@
 
           <section id="connectionPanel" class="settings-grid">
             <div class="provider-tabs provider-tabs-single">
-              <button data-provider="hermes" class="active" type="button">Gemma Local</button>
+              <button data-provider="hermes" class="active" type="button">Puter Fast</button>
             </div>
 
             <div class="box security-box">
@@ -2947,15 +2947,15 @@
               <label>
                 <span>Model</span>
                 <select id="hermesModel" class="field">
-                  <option value="gemma2:2b">Gemma 2 2B · no-key local</option>
+                  <option value="qwen/qwen3.6-flash">Qwen3.6 Flash · no-key</option>
                 </select>
               </label>
               <label>
-                <span>Model server endpoint</span>
-                <input id="hermesEndpoint" class="field" value="http://127.0.0.1:8080/api/chat" />
+                <span>AI endpoint</span>
+                <input id="hermesEndpoint" class="field" value="puter://chat" />
               </label>
               <p class="note">
-                App ini memakai Gemma 2 2B yang berjalan di model server lokal. Tidak perlu API key; untuk HP/GitHub Pages, pakai endpoint HTTPS tunnel model server.
+                Default memakai Puter.js no-key langsung dari browser. Untuk Gemma lokal, isi endpoint model-server atau tunnel HTTPS kamu.
               </p>
               <div style="display:grid;grid-template-columns:1fr auto;gap:8px">
                 <button id="testHermesButton" class="btn btn-primary" type="button">Uji endpoint</button>
@@ -3009,7 +3009,7 @@ Aturan utama:
             </div>
             <div class="box">
               <div class="box-head">
-                <h3>Gemma local curl</h3>
+                <h3>Puter no-key snippet</h3>
                 <button class="btn btn-soft copy-button" type="button" data-copy="hermesSnippet">Copy</button>
               </div>
               <pre id="hermesSnippet" class="codebox"></pre>
@@ -3143,9 +3143,10 @@ Aturan utama:
       <div id="toast" class="toast" hidden></div>
     </div>
 
+    <script src="https://js.puter.com/v2/" async></script>
     <script src="braint-Ai.js"></script>
     <script>
-      const SETTINGS_KEY = "ai-agent-chat-settings-v1";
+      const SETTINGS_KEY = "ai-agent-chat-settings-v2";
       const CONVERSATIONS_KEY = "ai-agent-chat-conversations-v1";
       const SKILLS_KEY = "ai-agent-chat-skills-v1";
       const SETTINGS_UNLOCK_KEY = "ai-agent-chat-settings-unlocked-v1";
@@ -3157,10 +3158,13 @@ Aturan utama:
       const HERMES_CONTEXT_MESSAGE_LIMIT = 2;
       const HERMES_CONTEXT_CHAR_LIMIT = 240;
       const HERMES_SYSTEM_PROMPT_CHAR_LIMIT = 240;
-      const HERMES_HOSTED_MAX_OUTPUT_TOKENS = 16;
+      const HERMES_HOSTED_MAX_OUTPUT_TOKENS = 96;
       const HERMES_HOSTED_CODE_MAX_OUTPUT_TOKENS = 768;
       const HERMES_OPENAI_MAX_OUTPUT_TOKENS = 2048;
       const HERMES_HOSTED_TEST_TOKENS = 8;
+      const PUTER_SCRIPT_URL = "https://js.puter.com/v2/";
+      const PUTER_ENDPOINT = "puter://chat";
+      const PUTER_MODEL = "qwen/qwen3.6-flash";
       const GEMMA_SERVER_ENDPOINT = "http://127.0.0.1:8080/api/chat";
       const GEMMA_MODEL = "gemma2:2b";
       const GEMMA_RETRY_STATUSES = new Set([408, 409, 425, 429, 500, 502, 503, 504]);
@@ -3195,17 +3199,17 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
 
       const DEFAULTS = {
         provider: "hermes",
-        hermesEndpoint: GEMMA_SERVER_ENDPOINT,
-        hermesModel: GEMMA_MODEL,
+        hermesEndpoint: PUTER_ENDPOINT,
+        hermesModel: PUTER_MODEL,
         chainOfThoughtForced: true,
         systemPrompt: SYSTEM_PERSONA
       };
 
       const GEMMA_MODELS = Object.freeze([
         {
-          id: GEMMA_MODEL,
-          label: "Gemma 2 2B",
-          detail: "No-key local Gemma 2 2B model server",
+          id: PUTER_MODEL,
+          label: "Qwen3.6 Flash",
+          detail: "No-key Puter.js fast model",
           reasoning: true
         }
       ]);
@@ -3371,6 +3375,10 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         return `${normalizeUrl(base)}${path.startsWith("/") ? path : `/${path}`}`;
       }
 
+      function isPuterEndpoint(value) {
+        return normalizeUrl(value).toLowerCase() === PUTER_ENDPOINT;
+      }
+
       function isPlaceholderEndpoint(value) {
         const normalized = normalizeUrl(value).toLowerCase();
         return normalized.includes("your-hermes-7b-server.example.com") ||
@@ -3391,7 +3399,8 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
 
       function normalizeGemmaEndpoint(value) {
         const normalized = normalizeUrl(value);
-        if (isLegacyHostedEndpoint(normalized)) return GEMMA_SERVER_ENDPOINT;
+        if (isPuterEndpoint(normalized)) return PUTER_ENDPOINT;
+        if (isLegacyHostedEndpoint(normalized)) return PUTER_ENDPOINT;
         return normalized.replace(/\/v1\/chat\/completions$/i, "/api/chat");
       }
 
@@ -3400,6 +3409,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
       }
 
       function modelDefaultEndpoint(model, currentEndpoint = "") {
+        if (model === PUTER_MODEL) return PUTER_ENDPOINT;
         return normalizeGemmaEndpoint(currentEndpoint);
       }
 
@@ -3421,11 +3431,11 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
 
       function hermesModelLabel(model = state.settings.hermesModel) {
         const item = GEMMA_MODELS.find((entry) => entry.id === model);
-        return item ? `${item.label} · local` : "Gemma local model";
+        return item ? `${item.label} · no-key` : "No-key AI model";
       }
 
       function gemmaEndpointMessage() {
-        return "Endpoint Gemma 2 2B belum tersambung. Jalankan model-server lokal atau isi endpoint HTTPS tunnel model server di Set > Koneksi.";
+        return "Endpoint AI belum tersambung. Pakai puter://chat atau isi endpoint HTTPS model server di Set > Koneksi.";
       }
 
       function activeConversation() {
@@ -3918,7 +3928,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
       }
 
       function providerLabel(provider = state.settings.provider) {
-        return "Gemma Local";
+        return "Puter Fast";
       }
 
       function assistantLabel() {
@@ -3930,7 +3940,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
       }
 
       function activeEndpointLabel() {
-        return "No-key Gemma model server";
+        return isPuterEndpoint(state.settings.hermesEndpoint) ? "No-key Puter.js" : "No-key model server";
       }
 
       function sanitizeVisibleModelText(value) {
@@ -4345,6 +4355,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
       function endpointKind(endpoint = state.settings.hermesEndpoint) {
         const normalized = normalizeUrl(endpoint);
         if (!normalized) return "missing";
+        if (isPuterEndpoint(normalized)) return "puter";
         if (/\/\/(localhost|127\.0\.0\.1)\b/i.test(normalized)) return "loopback";
         if (/\.trycloudflare\.com\b/i.test(normalized)) return "tunnel";
         if (normalized.includes("huggingface.co")) return "local-hf";
@@ -4483,19 +4494,20 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         ].join("\n");
 
         $("hermesSnippet").textContent = [
-          "# Gemma 2 2B no-key model server:",
-          `curl "${gemmaChatEndpoint(state.settings.hermesEndpoint)}" \\`,
-          "  -H 'Content-Type: application/json' \\",
-          `  -d '{"model":"${DEFAULTS.hermesModel}","stream":false,"messages":[{"role":"user","content":"Halo"}],"max_tokens":64}'`
+          "# Puter.js no-key chat:",
+          "<script src=\"https://js.puter.com/v2/\"><\\/script>",
+          "<script>",
+          `puter.ai.chat("Halo", { model: "${PUTER_MODEL}" }).then(console.log);`,
+          "<\\/script>"
         ].join("\n");
 
         $("colabSnippet").textContent = [
           "# Model aktif:",
-          "Provider: Gemma Local",
+          "Provider: Puter.js",
           `Endpoint: ${gemmaChatEndpoint(state.settings.hermesEndpoint)}`,
-          `Model: ${GEMMA_MODEL}`,
+          `Model: ${PUTER_MODEL}`,
           "API key: tidak perlu",
-          "Catatan: jalankan model-server lokal atau tunnel HTTPS agar GitHub Pages/HP bisa mengakses model."
+          "Catatan: Gemma lokal tetap bisa dipakai lewat endpoint model-server jika kamu isi manual."
         ].join("\n");
       }
 
@@ -4770,17 +4782,23 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
       }
 
       function hermesEndpointMode(endpoint = state.settings.hermesEndpoint) {
+        if (isPuterEndpoint(endpoint)) return "puter";
         return normalizeUrl(endpoint).endsWith("/api/chat") ? "ollama" : "openai";
       }
 
       function gemmaChatEndpoint(endpoint = state.settings.hermesEndpoint) {
-        const normalized = normalizeUrl(endpoint) || GEMMA_SERVER_ENDPOINT;
+        const normalized = normalizeUrl(endpoint) || PUTER_ENDPOINT;
+        if (isPuterEndpoint(normalized)) return PUTER_ENDPOINT;
         if (/\/(v1\/chat\/completions|api\/chat)$/i.test(normalized)) return normalized;
         return joinUrl(normalized, "/api/chat");
       }
 
       function hermesRequestUrl(endpoint = state.settings.hermesEndpoint) {
         return gemmaChatEndpoint(endpoint);
+      }
+
+      function activePayloadModel(endpoint = state.settings.hermesEndpoint) {
+        return isPuterEndpoint(endpoint) ? PUTER_MODEL : GEMMA_MODEL;
       }
 
       function hermesLocalConnectionMessage(error = null) {
@@ -4794,7 +4812,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
 
       function hermesTimeoutMessage(timeoutMs) {
         const seconds = Math.round(timeoutMs / 1000);
-        return `Gemma 2 2B belum selesai dalam ${seconds} detik.`;
+        return `Endpoint model belum mengirim jawaban asli dalam ${seconds} detik.`;
       }
 
       function hermesRequestTimeoutMs(options = {}) {
@@ -4836,6 +4854,66 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         }
       }
 
+      let puterSdkPromise = null;
+
+      function promiseWithTimeout(promise, timeoutMs, message) {
+        const sourceSignal = state.abortController?.signal;
+        return new Promise((resolve, reject) => {
+          let settled = false;
+          const finish = (callback, value) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            if (sourceSignal) sourceSignal.removeEventListener("abort", onAbort);
+            callback(value);
+          };
+          const onAbort = () => {
+            const error = new Error("Generasi dihentikan.");
+            error.name = "AbortError";
+            finish(reject, error);
+          };
+          const timer = setTimeout(() => {
+            const error = new Error(message);
+            error.name = "TimeoutError";
+            finish(reject, error);
+          }, timeoutMs);
+          if (sourceSignal?.aborted) {
+            onAbort();
+            return;
+          }
+          if (sourceSignal) sourceSignal.addEventListener("abort", onAbort, { once: true });
+          Promise.resolve(promise).then(
+            (value) => finish(resolve, value),
+            (error) => finish(reject, error)
+          );
+        });
+      }
+
+      function ensurePuterSdk() {
+        if (window.puter?.ai?.chat) return Promise.resolve(window.puter);
+        if (puterSdkPromise) return puterSdkPromise;
+        puterSdkPromise = new Promise((resolve, reject) => {
+          const existing = document.querySelector(`script[src="${PUTER_SCRIPT_URL}"]`);
+          const script = existing || document.createElement("script");
+          const onLoad = () => {
+            if (window.puter?.ai?.chat) resolve(window.puter);
+            else reject(new Error("Puter.js termuat, tapi API chat belum tersedia."));
+          };
+          const onError = () => reject(new Error("Gagal memuat Puter.js AI no-key."));
+          script.addEventListener("load", onLoad, { once: true });
+          script.addEventListener("error", onError, { once: true });
+          if (!existing) {
+            script.src = PUTER_SCRIPT_URL;
+            script.async = true;
+            document.head.appendChild(script);
+          }
+        }).catch((error) => {
+          puterSdkPromise = null;
+          throw error;
+        });
+        return puterSdkPromise;
+      }
+
       async function assertLocalModelReady() {
         state.settings.hermesModel = DEFAULTS.hermesModel;
         state.settings.hermesEndpoint = effectiveHermesEndpoint();
@@ -4856,7 +4934,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
           : [];
 
         return {
-          model: GEMMA_MODEL,
+          model: activePayloadModel(),
           messages: [...systemMessage, ...messages],
           temperature,
           max_tokens: maxOutputTokens,
@@ -4888,14 +4966,29 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         return `Gemma 2 2B model server sedang sibuk (${response.status}). Mencoba ulang dalam ${seconds} detik. Sisa percobaan: ${triesLeft}.`;
       }
 
-      function isTransientProviderError(error) {
-        return error?.name === "TimeoutError" || error?.providerBusy === true;
-      }
-
       function makeProviderBusyError(message) {
         const error = new Error(message);
         error.providerBusy = true;
         return error;
+      }
+
+      async function postPuterPayload(payload, options = {}) {
+        const timeoutMs = hermesRequestTimeoutMs(options);
+        const startedAt = performance.now();
+        await promiseWithTimeout(
+          ensurePuterSdk(),
+          Math.min(timeoutMs, 2500),
+          "Puter.js AI no-key belum siap dalam 2.5 detik."
+        );
+        const remainingMs = Math.max(750, timeoutMs - Math.round(performance.now() - startedAt));
+        return promiseWithTimeout(
+          window.puter.ai.chat(payload.messages, false, {
+            model: PUTER_MODEL,
+            stream: false
+          }),
+          remainingMs,
+          `Puter.js ${PUTER_MODEL} belum mengirim jawaban asli dalam ${Math.round(timeoutMs / 1000)} detik.`
+        );
       }
 
       async function postHermesPayload(payload, options = {}) {
@@ -4932,32 +5025,26 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         await assertLocalModelReady();
 
         const payload = makeHermesPayload(conversation, options.systemPrompt ?? state.settings.systemPrompt, options);
-        const latestUserText = latestUserContent(conversation);
-        const canUseFastFallback = Boolean(localSafeFallbackAnswer(latestUserText, true));
-        let response;
-        try {
-          response = await postHermesPayload(payload, {
-            ...options,
-            ...(canUseFastFallback ? {
-              maxRetries: 0
-            } : {}),
-            onRetry: ({ response: retryResponse, attempt, maxRetries, delayMs }) => {
-              assistantMessage.content = gemmaRetryMessage(retryResponse, attempt, delayMs);
-              assistantMessage.pending = true;
-              setStatus("hermes", "checking", `Retry ${attempt}/${maxRetries}`);
-              scrollChat();
-            }
-          });
-        } catch (error) {
-          const fallback = isTransientProviderError(error) ? localSafeFallbackAnswer(latestUserText, true) : "";
-          if (!fallback) throw error;
-          assistantMessage.content = fallback;
-          assistantMessage.model = `${hermesModelLabel()} fallback`;
+        if (isPuterEndpoint(state.settings.hermesEndpoint)) {
+          const json = await postPuterPayload(payload, options);
+          assistantMessage.content = extractHermesText(json);
+          assistantMessage.model = extractHermesModelLabel(json) || PUTER_MODEL;
           state.lastLatency = Math.round(performance.now() - startedAt);
-          state.lastModel = hermesModelLabel();
-          setStatus("hermes", "checking", "Fallback");
+          state.lastModel = assistantMessage.model;
+          setStatus("hermes", "ok", `Online: ${assistantMessage.model}`);
           return;
         }
+
+        let response;
+        response = await postHermesPayload(payload, {
+          ...options,
+          onRetry: ({ response: retryResponse, attempt, maxRetries, delayMs }) => {
+            assistantMessage.content = gemmaRetryMessage(retryResponse, attempt, delayMs);
+            assistantMessage.pending = true;
+            setStatus("hermes", "checking", `Retry ${attempt}/${maxRetries}`);
+            scrollChat();
+          }
+        });
 
         if (response.ok) {
           const json = await response.json();
@@ -4968,34 +5055,26 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
               const retryText = extractHermesText(await retryResponse.json());
               if (retryText && !isModelRefusal(retryText)) content = retryText;
             }
-            if (isModelRefusal(content)) {
-              content = localSafeFallbackAnswer(latestUserContent(conversation)) || content;
-            }
           }
           assistantMessage.content = content;
-          assistantMessage.model = hermesModelLabel();
+          assistantMessage.model = extractHermesModelLabel(json) || hermesModelLabel();
           state.lastLatency = Math.round(performance.now() - startedAt);
-          state.lastModel = hermesModelLabel();
-          setStatus("hermes", "ok", `Online: ${hermesModelLabel()}`);
+          state.lastModel = assistantMessage.model;
+          setStatus("hermes", "ok", `Online: ${assistantMessage.model}`);
           return;
         }
 
         const apiError = await readApiError(response, hermesModelLabel());
-        const fallback = localSafeFallbackAnswer(latestUserText, isRetryableGemmaStatus(apiError?.status));
-        if (fallback) {
-          assistantMessage.content = fallback;
-          assistantMessage.model = `${hermesModelLabel()} fallback`;
-          state.lastLatency = Math.round(performance.now() - startedAt);
-          state.lastModel = hermesModelLabel();
-          setStatus("hermes", "checking", "Fallback");
-          return;
-        }
         throw new Error(apiError?.message || `${APP_NAME} request gagal.`);
       }
 
       function extractHermesText(json) {
+        if (typeof json === "string" && json.trim()) return json.trim();
+        if (!json || typeof json !== "object") return String(json || "").trim();
         const text =
           json.message?.content ||
+          json.text ||
+          json.output_text ||
           json.response ||
           json.choices?.[0]?.message?.content ||
           json.choices?.[0]?.text ||
@@ -5003,6 +5082,12 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
           (Array.isArray(json) ? json[0]?.generated_text : "");
         if (String(text || "").trim()) return String(text).trim();
         return JSON.stringify(json, null, 2);
+      }
+
+      function extractHermesModelLabel(json) {
+        const model = String(json?.model || json?.model_name || "").trim();
+        if (!model) return "";
+        return compactText(model, 42);
       }
 
       function latestUserContent(conversation) {
@@ -5019,22 +5104,6 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         if (!text || text.length > 500) return false;
         if (/\b(malware|phishing|hack|bypass|exploit|bom|racun|bunuh|mencuri|curi data|carding|ddos)\b/i.test(text)) return false;
         return true;
-      }
-
-      function localSafeFallbackAnswer(value, providerBusy = false) {
-        const text = String(value || "").trim();
-        if (/^(halo|hai|hi|hello|p|yo|tes|test)\b/i.test(text)) {
-          if (providerBusy) {
-            return "Halo, aku Passeo-ai-Agent. Aku balas cepat; Gemma lokal butuh lebih dari 5 detik di perangkat ini.";
-          }
-          return "Halo, aku Passeo-ai-Agent. Ada yang mau kamu kerjakan?";
-        }
-        if (providerBusy) {
-          const onlyMatch = text.match(/jawab\s+hanya\s+(?:dengan\s+)?(?:angka\s+)?(.{1,80})/i);
-          if (onlyMatch?.[1]) return onlyMatch[1].replace(/[.!?]+$/g, "").trim();
-          return `Aku terima: "${compactText(text, 120)}". Gemma lokal belum selesai dalam 5 detik, jadi aku hentikan supaya chat tetap cepat.`;
-        }
-        return "";
       }
 
       function makeHermesRecoveryPayload(payload) {
@@ -5066,7 +5135,8 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         const clone = response.clone();
         try {
           const json = await response.json();
-          detail = json.error?.message || json.message || JSON.stringify(json, null, 2);
+          const jsonDetail = Array.isArray(json.details) ? json.details.join(" | ") : json.details;
+          detail = json.error?.message || json.detail || json.error || json.message || jsonDetail || JSON.stringify(json, null, 2);
         } catch {
           try {
             detail = await clone.text();
@@ -5078,7 +5148,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         const status = response.status;
         const prefix = `${provider} error ${status}`;
         if (status === 401) {
-          return { status, message: `${prefix}: endpoint model server meminta autentikasi. Pakai endpoint Gemma no-key atau buka akses CORS/server.` };
+          return { status, message: `${prefix}: endpoint model server meminta autentikasi. Pakai puter://chat no-key atau simpan token hanya di server.` };
         }
         if (status === 403) {
           return { status, message: `${prefix}: endpoint model server menolak request dari halaman ini. Cek CORS/origin server. Detail: ${detail}` };
@@ -5090,7 +5160,10 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
           return { status, message: `${prefix}: model server sedang penuh. Tunggu sebentar lalu coba lagi.` };
         }
         if (status === 503) {
-          return { status, message: `${prefix}: Gemma 2 2B belum siap atau model belum dimuat.` };
+          return { status, message: `${prefix}: model server belum siap atau fast endpoint belum valid. Detail: ${detail}` };
+        }
+        if (status === 504) {
+          return { status, message: `${prefix}: endpoint model tidak memberi jawaban asli dalam 5 detik. Detail: ${detail}` };
         }
         if ([400, 422].includes(status)) {
           return { status, message: `${prefix}: request model server ditolak. Detail: ${detail}` };
@@ -5269,7 +5342,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
             timeoutMs: HERMES_TEST_TIMEOUT_MS
           });
           setStatus("hermes", "ok", tempMessage.model ? `Online: ${APP_NAME}` : "Online");
-          showToast("Gemma 2 2B model server tersambung.");
+          showToast("AI model no-key tersambung.");
         } catch (error) {
           setStatus("hermes", "bad", "Offline");
           showToast(error.message.slice(0, 180));

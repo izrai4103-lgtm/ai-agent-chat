@@ -53,6 +53,34 @@ http://127.0.0.1:8080/api/chat
 
 Default proxy disetel untuk respons cepat: `HERMES_NUM_CTX=128`, `HERMES_NUM_PREDICT=16`, dan `HERMES_UPSTREAM_TIMEOUT_MS=4500`. Jika butuh jawaban lebih panjang, naikkan env tersebut, tetapi respons bisa melewati 5 detik di CPU.
 
+## Jawaban asli di bawah 5 detik
+
+Jika Gemma 2 2B lokal terlalu lambat, jangan pakai fallback palsu di browser. Set fast endpoint legal di server. Browser tetap no-key karena token, jika ada, hanya dibaca oleh `model-server`.
+
+Contoh OpenAI-compatible endpoint cepat:
+
+```bash
+HERMES_FAST_UPSTREAM_URL=https://api.groq.com/openai/v1 \
+HERMES_FAST_MODEL=llama-3.1-8b-instant \
+HERMES_FAST_UPSTREAM_KEY=isi_token_di_server \
+HERMES_FAST_PRIMARY=1 \
+HERMES_MODEL=gemma2:2b \
+HERMES_UPSTREAM_URL=http://127.0.0.1:11434 \
+PORT=8080 npm start
+```
+
+Contoh Hugging Face Router:
+
+```bash
+HERMES_FAST_UPSTREAM_URL=https://router.huggingface.co/v1 \
+HERMES_FAST_MODEL=google/gemma-2-2b-it \
+HERMES_FAST_UPSTREAM_KEY=$HF_TOKEN \
+HERMES_FAST_PRIMARY=1 \
+PORT=8080 npm start
+```
+
+Untuk endpoint self-hosted yang memang no-key, isi `HERMES_FAST_UPSTREAM_URL` dan `HERMES_FAST_MODEL` tanpa `HERMES_FAST_UPSTREAM_KEY`.
+
 ## Hugging Face Transformers lokal
 
 Jika Gemma 2 2B sudah ada di cache Hugging Face atau folder lokal, server ini juga bisa dijalankan langsung dengan Transformers tanpa API key/browser token:

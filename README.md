@@ -1,9 +1,9 @@
 # AI Agent Chat
 
-Static GitHub Pages app for chatting with Passeo-ai-Agent through one no-key local Gemma 2 2B model server:
+Static GitHub Pages app for chatting with Passeo-ai-Agent through one no-key Puter.js model by default:
 
-- Default endpoint: `http://127.0.0.1:8080/api/chat`
-- Model: `gemma2:2b`
+- Default endpoint: `puter://chat`
+- Model: `qwen/qwen3.6-flash`
 - API key: not required
 
 The browser app stores chat history, settings, enabled skills, and Vector DB cache locally. Chat prompts are sent only to the model endpoint selected in Settings.
@@ -19,7 +19,7 @@ Open `http://127.0.0.1:4175`.
 
 The legacy `hermes-ollama-agent/` folder is kept as a standalone copy. GitHub Pages should use `docs/`.
 
-## Local Gemma
+## Optional Local Gemma
 
 Use the already-downloaded Ollama model:
 
@@ -52,8 +52,9 @@ gh repo create ai-agent-chat --public --source=. --remote=origin --push
 
 In GitHub, enable Pages with **Build and deployment: Deploy from a branch**, then select branch `main` and folder `/docs`.
 
-No model API key is committed or required. Temporary model-server responses such as `408`, `409`, `425`, `429`, `500`, `502`, `503`, and `504` are retried before showing an error.
-Chat UI uses a 5-second response budget. If local Gemma 2 2B on CPU cannot finish in time, the app returns a fast local fallback instead of leaving the user waiting.
+No model API key is committed. The default browser app is no-key through Puter.js. If you switch to a custom model server endpoint, the browser only calls that endpoint.
+
+Chat UI uses a 5-second response budget and no longer fabricates local fallback answers. The default fast model is `qwen/qwen3.6-flash`. If you switch back to local Gemma 2 2B and CPU inference cannot finish in time, configure a legal fast endpoint in `model-server` with `HERMES_FAST_UPSTREAM_URL`, `HERMES_FAST_MODEL`, and optional server-side `HERMES_FAST_UPSTREAM_KEY`.
 
 ## TikTok LIVE Connector
 
