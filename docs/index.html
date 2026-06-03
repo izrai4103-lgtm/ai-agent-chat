@@ -6,7 +6,7 @@
     <title>Passeo-ai-Agent</title>
     <meta
       name="description"
-      content="External hosted AI chat agent with a free model endpoint."
+      content="External hosted AI chat agent with Hugging Face Llama 3.1."
     />
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
     <style>
@@ -2842,7 +2842,7 @@
           <div style="display:flex;gap:8px">
             <button id="downloadButton" class="btn btn-soft btn-icon" type="button" title="Ekspor chat" aria-label="Ekspor chat">DL</button>
             <button id="deleteButton" class="btn btn-soft btn-icon" type="button" title="Hapus chat" aria-label="Hapus chat">×</button>
-            <a class="btn btn-soft btn-icon" href="https://text.pollinations.ai/openai" target="_blank" rel="noreferrer" title="External free model endpoint" aria-label="External free model endpoint">?</a>
+            <a class="btn btn-soft btn-icon" href="https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct" target="_blank" rel="noreferrer" title="Hugging Face Llama 3.1 model" aria-label="Hugging Face Llama 3.1 model">?</a>
           </div>
         </footer>
       </aside>
@@ -2871,7 +2871,7 @@
           <div class="ops-card">
             <span class="ops-label">Runtime</span>
             <strong id="opsRuntime" class="ops-value">Idle</strong>
-            <small id="opsRuntimeMeta">Pollinations standby</small>
+            <small id="opsRuntimeMeta">Hugging Face standby</small>
           </div>
           <div class="ops-card">
             <span class="ops-label">Agent</span>
@@ -2923,7 +2923,7 @@
 
           <section id="connectionPanel" class="settings-grid">
             <div class="provider-tabs provider-tabs-single">
-              <button data-provider="hermes" class="active" type="button">Pollinations</button>
+              <button data-provider="hermes" class="active" type="button">Hugging Face</button>
             </div>
 
             <div class="box security-box">
@@ -2947,15 +2947,19 @@
               <label>
                 <span>Model</span>
                 <select id="hermesModel" class="field">
-                  <option value="openai-large">GPT-5.4 · epic reasoning · free Pollinations</option>
+                  <option value="meta-llama/Llama-3.1-8B-Instruct">Llama 3.1 8B Instruct · Hugging Face</option>
                 </select>
               </label>
               <label>
-                <span>Pollinations endpoint</span>
-                <input id="hermesEndpoint" class="field" value="https://text.pollinations.ai/openai" readonly />
+                <span>Hugging Face endpoint</span>
+                <input id="hermesEndpoint" class="field" value="https://router.huggingface.co/v1/chat/completions" readonly />
+              </label>
+              <label>
+                <span>HF token</span>
+                <input id="hermesToken" class="field" type="password" autocomplete="off" placeholder="hf_..." />
               </label>
               <p class="note">
-                App ini hanya memakai satu model no-key dari Pollinations: openai-large.
+                App ini hanya memakai satu model Hugging Face: meta-llama/Llama-3.1-8B-Instruct. Token disimpan lokal di browser perangkat ini.
               </p>
               <div style="display:grid;grid-template-columns:1fr auto;gap:8px">
                 <button id="testHermesButton" class="btn btn-primary" type="button">Uji endpoint</button>
@@ -3009,7 +3013,7 @@ Aturan utama:
             </div>
             <div class="box">
               <div class="box-head">
-                <h3>Pollinations curl</h3>
+                <h3>Hugging Face curl</h3>
                 <button class="btn btn-soft copy-button" type="button" data-copy="hermesSnippet">Copy</button>
               </div>
               <pre id="hermesSnippet" class="codebox"></pre>
@@ -3161,11 +3165,12 @@ Aturan utama:
       const HERMES_HOSTED_CODE_MAX_OUTPUT_TOKENS = 768;
       const HERMES_OPENAI_MAX_OUTPUT_TOKENS = 2048;
       const HERMES_HOSTED_TEST_TOKENS = 8;
-      const POLLINATIONS_ENDPOINT = "https://text.pollinations.ai/openai";
-      const POLLINATIONS_RETRY_STATUSES = new Set([429, 502, 503, 504]);
-      const POLLINATIONS_MAX_RETRIES = 6;
-      const POLLINATIONS_RETRY_DELAYS = [3500, 6000, 10000, 16000, 24000, 32000];
-      const POLLINATIONS_FAST_FALLBACK_TIMEOUT_MS = 8000;
+      const HUGGINGFACE_ENDPOINT = "https://router.huggingface.co/v1/chat/completions";
+      const HUGGINGFACE_MODEL = "meta-llama/Llama-3.1-8B-Instruct";
+      const HUGGINGFACE_RETRY_STATUSES = new Set([408, 409, 425, 429, 500, 502, 503, 504]);
+      const HUGGINGFACE_MAX_RETRIES = 4;
+      const HUGGINGFACE_RETRY_DELAYS = [1500, 3000, 5000, 8000];
+      const HUGGINGFACE_FAST_FALLBACK_TIMEOUT_MS = 8000;
       const EXPLANATION_REQUEST_PATTERN =
         /\b(jelaskan|jelasin|terangkan|uraikan|rincikan|analisis|analisa|bedah|kenapa|mengapa|kok|alasan|sebab|penyebab|explain|why|reason|analyze|analyse|break down|how come)\b/i;
       const GET_TIME_REQUEST_PATTERN =
@@ -3195,21 +3200,22 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
 
       const DEFAULTS = {
         provider: "hermes",
-        hermesEndpoint: POLLINATIONS_ENDPOINT,
-        hermesModel: "openai-large",
+        hermesEndpoint: HUGGINGFACE_ENDPOINT,
+        hermesModel: HUGGINGFACE_MODEL,
+        hermesToken: "",
         chainOfThoughtForced: true,
         systemPrompt: SYSTEM_PERSONA
       };
 
-      const POLLINATIONS_MODELS = Object.freeze([
+      const HUGGINGFACE_MODELS = Object.freeze([
         {
-          id: "openai-large",
-          label: "GPT-5.4",
-          detail: "Most powerful & intelligent Pollinations model",
+          id: HUGGINGFACE_MODEL,
+          label: "Llama 3.1 8B Instruct",
+          detail: "Official gated Meta Llama 3.1 model via Hugging Face Inference Router",
           reasoning: true
         }
       ]);
-      const HERMES_7B_MODELS = POLLINATIONS_MODELS.map((model) => model.id);
+      const HERMES_7B_MODELS = HUGGINGFACE_MODELS.map((model) => model.id);
       const HERMES_EXTERNAL_CHAT_TIMEOUT_MS = 45000;
       const HERMES_TEST_TIMEOUT_MS = 20000;
       const HERMES_CODE_TIMEOUT_MS = 180000;
@@ -3383,34 +3389,44 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
       }
 
       function effectiveHermesEndpoint(endpoint = state.settings.hermesEndpoint, model = state.settings.hermesModel) {
-        return POLLINATIONS_ENDPOINT;
+        return HUGGINGFACE_ENDPOINT;
       }
 
       function modelDefaultEndpoint(model, currentEndpoint = "") {
-        return POLLINATIONS_ENDPOINT;
+        return HUGGINGFACE_ENDPOINT;
       }
 
       function normalizeHermesSettings(settings = state.settings) {
         settings.provider = "hermes";
-        settings.hermesEndpoint = POLLINATIONS_ENDPOINT;
+        settings.hermesEndpoint = HUGGINGFACE_ENDPOINT;
         settings.hermesModel = HERMES_7B_MODELS.includes(settings.hermesModel)
           ? settings.hermesModel
           : DEFAULTS.hermesModel;
+        settings.hermesToken = String(settings.hermesToken || settings.huggingFaceToken || "").trim();
         delete settings["gem" + "iniEndpoint"];
         delete settings["gem" + "iniModel"];
         delete settings["gem" + "iniKey"];
         delete settings["gem" + "iniKeys"];
         delete settings["gem" + "iniKeyCursor"];
+        delete settings.huggingFaceToken;
         return settings;
       }
 
       function hermesModelLabel(model = state.settings.hermesModel) {
-        const item = POLLINATIONS_MODELS.find((entry) => entry.id === model);
-        return item ? `${item.label} · Pollinations` : "Pollinations model";
+        const item = HUGGINGFACE_MODELS.find((entry) => entry.id === model);
+        return item ? `${item.label} · Hugging Face` : "Hugging Face model";
       }
 
-      function pollinationsEndpointMessage() {
-        return "Endpoint Pollinations gratis belum tersambung. Coba lagi sebentar; anonymous requests bisa kena antrean atau rate limit.";
+      function huggingFaceEndpointMessage() {
+        return "Endpoint Hugging Face belum tersambung. Pastikan HF token terisi, punya izin Inference Providers, dan sudah mendapat akses model gated Llama 3.1.";
+      }
+
+      function huggingFaceMissingTokenMessage() {
+        return "Token Hugging Face belum diisi. Buka Set > Koneksi, masukkan HF token dengan permission Inference Providers dan akses model Llama 3.1.";
+      }
+
+      function huggingFaceToken() {
+        return String(state.settings.hermesToken || "").trim();
       }
 
       function activeConversation() {
@@ -3884,7 +3900,8 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         state.settings.provider = document.querySelector(".provider-tabs button.active")?.dataset.provider || state.settings.provider;
         if (state.settingsUnlocked) {
           state.settings.hermesModel = DEFAULTS.hermesModel;
-          state.settings.hermesEndpoint = POLLINATIONS_ENDPOINT;
+          state.settings.hermesEndpoint = HUGGINGFACE_ENDPOINT;
+          state.settings.hermesToken = $("hermesToken").value.trim();
           state.settings.chainOfThoughtForced = $("chainOfThoughtForced").checked;
           state.settings.systemPrompt = $("systemPrompt").value;
         }
@@ -3895,6 +3912,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         normalizeHermesSettings(state.settings);
         $("hermesModel").value = state.settings.hermesModel || DEFAULTS.hermesModel;
         $("hermesEndpoint").value = state.settings.hermesEndpoint || DEFAULTS.hermesEndpoint;
+        $("hermesToken").value = state.settings.hermesToken || "";
         $("chainOfThoughtForced").checked = state.settings.chainOfThoughtForced !== false;
         $("systemPrompt").value = state.settings.systemPrompt || DEFAULTS.systemPrompt;
         document.querySelectorAll(".provider-tabs button").forEach((button) => {
@@ -3903,7 +3921,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
       }
 
       function providerLabel(provider = state.settings.provider) {
-        return "Pollinations";
+        return "Hugging Face";
       }
 
       function assistantLabel() {
@@ -3915,7 +3933,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
       }
 
       function activeEndpointLabel() {
-        return "Pollinations no-key endpoint";
+        return "Hugging Face router endpoint";
       }
 
       function sanitizeVisibleModelText(value) {
@@ -4319,10 +4337,10 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         $("securityPill").innerHTML = `<span class="${statusDotClass(status)}"></span><span>${status.label}</span>`;
         $("lockSettingsButton").hidden = locked;
         $("securityNote").textContent = unlocked
-          ? "Kontrol model, endpoint, uji koneksi, chain_of_thought_forced, dan system prompt bisa diedit."
+          ? "Kontrol token Hugging Face, uji koneksi, chain_of_thought_forced, dan system prompt bisa diedit."
           : "Password ini hanya lock lokal di browser untuk mencegah edit tidak sengaja; bukan autentikasi server.";
 
-        ["hermesModel", "hermesEndpoint", "chainOfThoughtForced", "systemPrompt", "testHermesButton", "saveSettingsButton"].forEach((id) => {
+        ["hermesModel", "hermesEndpoint", "hermesToken", "chainOfThoughtForced", "systemPrompt", "testHermesButton", "saveSettingsButton"].forEach((id) => {
           const element = $(id);
           if (element) element.disabled = locked;
         });
@@ -4332,7 +4350,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
       function endpointKind(endpoint = state.settings.hermesEndpoint) {
         const normalized = normalizeUrl(endpoint);
         if (!normalized) return "missing";
-        if (normalized.includes("pollinations.ai")) return "external";
+        if (normalized.includes("huggingface.co")) return "external";
         if (/\/\/(localhost|127\.0\.0\.1)\b/i.test(normalized)) return "loopback";
         if (/\.trycloudflare\.com\b/i.test(normalized)) return "tunnel";
         return "custom";
@@ -4340,7 +4358,10 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
 
       function networkModeStatus() {
         const endpoint = effectiveHermesEndpoint(state.settings.hermesEndpoint, state.settings.hermesModel);
-        return endpoint ? { state: "checking", label: "No key" } : { state: "bad", label: "Missing" };
+        if (!endpoint) return { state: "bad", label: "Missing" };
+        return huggingFaceToken()
+          ? { state: "checking", label: "HF token" }
+          : { state: "bad", label: "Need token" };
       }
 
       function networkRows() {
@@ -4350,7 +4371,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         const rows = [
           {
             name: "Chat model",
-            status: `no-key · ${mode}`,
+            status: `${huggingFaceToken() ? "HF token" : "token kosong"} · ${mode}`,
             detail: `${state.settings.hermesModel} via ${endpointDetail}`
           },
           {
@@ -4470,19 +4491,20 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         ].join("\n");
 
         $("hermesSnippet").textContent = [
-          "# Pollinations no-key endpoint:",
-          `curl "${POLLINATIONS_ENDPOINT}" \\`,
+          "# Hugging Face Inference Router:",
+          `curl "${HUGGINGFACE_ENDPOINT}" \\`,
+          "  -H 'Authorization: Bearer $HF_TOKEN' \\",
           "  -H 'Content-Type: application/json' \\",
           `  -d '{"model":"${DEFAULTS.hermesModel}","stream":false,"messages":[{"role":"user","content":"Halo"}],"max_tokens":64}'`
         ].join("\n");
 
         $("colabSnippet").textContent = [
           "# Model aktif:",
-          "Provider: Pollinations",
-          "Endpoint: https://text.pollinations.ai/openai",
-          "Model: openai-large",
-          "API key: tidak perlu",
-          "Catatan: request anonymous bisa kena antrean/rate limit saat traffic tinggi."
+          "Provider: Hugging Face",
+          `Endpoint: ${HUGGINGFACE_ENDPOINT}`,
+          `Model: ${HUGGINGFACE_MODEL}`,
+          "API key: perlu HF token lokal",
+          "Catatan: model Llama 3.1 resmi gated; akun/token harus sudah mendapat akses model."
         ].join("\n");
       }
 
@@ -4761,21 +4783,21 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
       }
 
       function hermesRequestUrl(endpoint = state.settings.hermesEndpoint) {
-        return POLLINATIONS_ENDPOINT;
+        return HUGGINGFACE_ENDPOINT;
       }
 
       function hermesLocalConnectionMessage(error = null) {
         const detail = error?.message ? ` Detail: ${error.message}` : "";
         return [
-          pollinationsEndpointMessage(),
-          `Endpoint: ${POLLINATIONS_ENDPOINT}.`,
+          huggingFaceEndpointMessage(),
+          `Endpoint: ${HUGGINGFACE_ENDPOINT}.`,
           detail
         ].join(" ");
       }
 
       function hermesTimeoutMessage(timeoutMs) {
         const seconds = Math.round(timeoutMs / 1000);
-        return `Request Pollinations lewat ${seconds} detik. Coba lagi sebentar.`;
+        return `Request Hugging Face lewat ${seconds} detik. Coba lagi sebentar.`;
       }
 
       function hermesRequestTimeoutMs(options = {}) {
@@ -4819,7 +4841,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
 
       async function assertLocalModelReady() {
         state.settings.hermesModel = DEFAULTS.hermesModel;
-        state.settings.hermesEndpoint = POLLINATIONS_ENDPOINT;
+        state.settings.hermesEndpoint = HUGGINGFACE_ENDPOINT;
       }
 
       function makeHermesPayload(conversation, systemPrompt = state.settings.systemPrompt, options = {}) {
@@ -4835,7 +4857,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
           : [];
 
         return {
-          model: DEFAULTS.hermesModel,
+          model: HUGGINGFACE_MODEL,
           messages: [...systemMessage, ...messages],
           temperature,
           max_tokens: maxOutputTokens,
@@ -4843,33 +4865,53 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         };
       }
 
-      function isRetryablePollinationsStatus(status) {
-        return POLLINATIONS_RETRY_STATUSES.has(Number(status));
+      function isRetryableHuggingFaceStatus(status) {
+        return HUGGINGFACE_RETRY_STATUSES.has(Number(status));
       }
 
       function retryAfterDelayMs(response, attempt) {
         const retryAfter = Number(response.headers.get("retry-after") || 0);
         if (retryAfter > 0) return Math.min(retryAfter * 1000, 45000);
-        return POLLINATIONS_RETRY_DELAYS[Math.min(attempt, POLLINATIONS_RETRY_DELAYS.length - 1)];
+        return HUGGINGFACE_RETRY_DELAYS[Math.min(attempt, HUGGINGFACE_RETRY_DELAYS.length - 1)];
       }
 
-      function pollinationsRetryMessage(response, attempt, delayMs) {
+      function huggingFaceRetryMessage(response, attempt, delayMs) {
         const seconds = Math.max(1, Math.round(delayMs / 1000));
-        const triesLeft = Math.max(0, POLLINATIONS_MAX_RETRIES - attempt);
-        return `Pollinations no-key sedang penuh (${response.status}). Mencoba ulang dalam ${seconds} detik. Sisa percobaan: ${triesLeft}.`;
+        const triesLeft = Math.max(0, HUGGINGFACE_MAX_RETRIES - attempt);
+        return `Hugging Face Llama 3.1 sedang sibuk (${response.status}). Mencoba ulang dalam ${seconds} detik. Sisa percobaan: ${triesLeft}.`;
+      }
+
+      function isTransientProviderError(error) {
+        return error?.name === "TimeoutError" || error?.providerBusy === true;
+      }
+
+      function makeProviderBusyError(message) {
+        const error = new Error(message);
+        error.providerBusy = true;
+        return error;
       }
 
       async function postHermesPayload(payload, options = {}) {
-        const maxRetries = Math.max(0, Number(options.maxRetries ?? POLLINATIONS_MAX_RETRIES));
+        const token = huggingFaceToken();
+        if (!token) {
+          const error = new Error(huggingFaceMissingTokenMessage());
+          error.name = "ConfigurationError";
+          throw error;
+        }
+
+        const maxRetries = Math.max(0, Number(options.maxRetries ?? HUGGINGFACE_MAX_RETRIES));
         try {
           for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
             const response = await fetchWithTimeout(hermesRequestUrl(), {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json"
+              },
               body: JSON.stringify(payload)
             }, hermesRequestTimeoutMs(options));
 
-            if (!isRetryablePollinationsStatus(response.status) || attempt >= maxRetries) return response;
+            if (!isRetryableHuggingFaceStatus(response.status) || attempt >= maxRetries) return response;
 
             const delayMs = retryAfterDelayMs(response, attempt);
             if (typeof options.onRetry === "function") {
@@ -4880,7 +4922,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         } catch (error) {
           if (error.name === "AbortError") throw error;
           if (error.name === "TimeoutError") throw error;
-          throw new Error(hermesLocalConnectionMessage(error));
+          throw makeProviderBusyError(hermesLocalConnectionMessage(error));
         }
         throw new Error(hermesLocalConnectionMessage());
       }
@@ -4901,17 +4943,17 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
             ...options,
             ...(canUseFastFallback ? {
               maxRetries: 0,
-              timeoutMs: Math.min(Number(options.timeoutMs || POLLINATIONS_FAST_FALLBACK_TIMEOUT_MS), POLLINATIONS_FAST_FALLBACK_TIMEOUT_MS)
+              timeoutMs: Math.min(Number(options.timeoutMs || HUGGINGFACE_FAST_FALLBACK_TIMEOUT_MS), HUGGINGFACE_FAST_FALLBACK_TIMEOUT_MS)
             } : {}),
             onRetry: ({ response: retryResponse, attempt, maxRetries, delayMs }) => {
-              assistantMessage.content = pollinationsRetryMessage(retryResponse, attempt, delayMs);
+              assistantMessage.content = huggingFaceRetryMessage(retryResponse, attempt, delayMs);
               assistantMessage.pending = true;
               setStatus("hermes", "checking", `Retry ${attempt}/${maxRetries}`);
               scrollChat();
             }
           });
         } catch (error) {
-          const fallback = localSafeFallbackAnswer(latestUserText, true);
+          const fallback = isTransientProviderError(error) ? localSafeFallbackAnswer(latestUserText, true) : "";
           if (!fallback) throw error;
           assistantMessage.content = fallback;
           assistantMessage.model = `${hermesModelLabel()} fallback`;
@@ -4943,7 +4985,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         }
 
         const apiError = await readApiError(response, hermesModelLabel());
-        const fallback = localSafeFallbackAnswer(latestUserText, isRetryablePollinationsStatus(apiError?.status));
+        const fallback = localSafeFallbackAnswer(latestUserText, isRetryableHuggingFaceStatus(apiError?.status));
         if (fallback) {
           assistantMessage.content = fallback;
           assistantMessage.model = `${hermesModelLabel()} fallback`;
@@ -4987,7 +5029,7 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
         const text = String(value || "").trim();
         if (/^(halo|hai|hi|hello|p|yo|tes|test)\b/i.test(text)) {
           if (providerBusy) {
-            return "Halo, aku Passeo-ai-Agent. Pollinations no-key sedang padat, tapi chat sudah aktif. Kirim tugas atau pertanyaanmu, lalu aku akan coba lewat model lagi.";
+            return "Halo, aku Passeo-ai-Agent. Hugging Face Llama 3.1 sedang padat atau lambat, tapi chat sudah aktif. Kirim tugas atau pertanyaanmu, lalu aku akan coba lewat model lagi.";
           }
           return "Halo, aku Passeo-ai-Agent. Ada yang mau kamu kerjakan?";
         }
@@ -5020,23 +5062,37 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
 
       async function readApiError(response, provider) {
         let detail = "";
+        const clone = response.clone();
         try {
           const json = await response.json();
           detail = json.error?.message || json.message || JSON.stringify(json, null, 2);
         } catch {
-          detail = await response.text();
+          try {
+            detail = await clone.text();
+          } catch {
+            detail = response.statusText || "";
+          }
         }
         detail = sanitizeVisibleModelText(detail);
         const status = response.status;
         const prefix = `${provider} error ${status}`;
-        if (status === 503) {
-          return { status, message: `${prefix}: Pollinations sedang penuh atau belum siap.` };
+        if (status === 401) {
+          return { status, message: `${prefix}: HF token tidak valid atau belum punya permission Inference Providers. Isi token yang benar di Set > Koneksi.` };
+        }
+        if (status === 403) {
+          return { status, message: `${prefix}: token tidak punya akses ke model gated Llama 3.1 atau Inference Providers. Request access di halaman model Hugging Face lalu coba lagi. Detail: ${detail}` };
+        }
+        if (status === 404) {
+          return { status, message: `${prefix}: model ${HUGGINGFACE_MODEL} tidak tersedia lewat router/token ini. Detail: ${detail || response.statusText}` };
         }
         if (status === 429) {
-          return { status, message: `${prefix}: antrean/rate limit anonymous sedang penuh. Tunggu sebentar lalu coba lagi.` };
+          return { status, message: `${prefix}: kuota atau rate limit Hugging Face penuh. Tunggu sebentar lalu coba lagi.` };
         }
-        if ([400, 401, 403].includes(status)) {
-          return { status, message: `${prefix}: request Pollinations ditolak. Detail: ${detail}` };
+        if (status === 503) {
+          return { status, message: `${prefix}: Hugging Face sedang penuh atau provider model belum siap.` };
+        }
+        if ([400, 422].includes(status)) {
+          return { status, message: `${prefix}: request Hugging Face ditolak. Detail: ${detail}` };
         }
         return { status, message: `${prefix}: ${detail || response.statusText}` };
       }
@@ -5212,9 +5268,9 @@ Inference policy: sapaan aman harus dijawab normal; request aman harus dibantu; 
             timeoutMs: HERMES_TEST_TIMEOUT_MS
           });
           setStatus("hermes", "ok", tempMessage.model ? `Online: ${APP_NAME}` : "Online");
-          showToast("Pollinations no-key tersambung.");
+          showToast("Hugging Face Llama 3.1 tersambung.");
         } catch (error) {
-          setStatus("hermes", "bad", "Offline");
+          setStatus("hermes", "bad", error.name === "ConfigurationError" ? "Need token" : "Offline");
           showToast(error.message.slice(0, 180));
         } finally {
           state.abortController = null;

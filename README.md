@@ -1,12 +1,12 @@
 # AI Agent Chat
 
-Static GitHub Pages app for chatting with Passeo-ai-Agent through one no-key Pollinations model:
+Static GitHub Pages app for chatting with Passeo-ai-Agent through one Hugging Face Llama 3.1 model:
 
-- Endpoint: `https://text.pollinations.ai/openai`
-- Model: `openai-large`
-- API key: not required
+- Endpoint: `https://router.huggingface.co/v1/chat/completions`
+- Model: `meta-llama/Llama-3.1-8B-Instruct`
+- API key: Hugging Face token entered locally in the browser
 
-The browser app stores chat history, settings, enabled skills, and Vector DB cache locally. Chat prompts are sent only to the model endpoint selected in Settings.
+The browser app stores chat history, settings, Hugging Face token, enabled skills, and Vector DB cache locally. Chat prompts are sent only to the model endpoint selected in Settings.
 
 ## Local preview
 
@@ -33,8 +33,8 @@ gh repo create ai-agent-chat --public --source=. --remote=origin --push
 
 In GitHub, enable Pages with **Build and deployment: Deploy from a branch**, then select branch `main` and folder `/docs`.
 
-No model API key is committed or required for the Pollinations endpoint used by the app.
-Anonymous Pollinations requests can queue or rate-limit during high traffic; the app automatically retries temporary `429`, `502`, `503`, and `504` responses before showing an error.
+No Hugging Face token is committed. Llama 3.1 is a gated Hugging Face model, so the browser token must have Inference Providers permission and access to `meta-llama/Llama-3.1-8B-Instruct`.
+Temporary Hugging Face responses such as `408`, `409`, `425`, `429`, `500`, `502`, `503`, and `504` are retried before showing an error.
 
 ## TikTok LIVE Connector
 
